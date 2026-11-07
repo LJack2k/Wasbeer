@@ -469,8 +469,8 @@ the task, and checks the app answers.
 
 | On RTX-EPE | |
 |---|---|
-| `C:\Wasbeer.git` | bare repo, pushed to over SSH |
-| `C:\Wasbeer` | working copy, `pull --ff-only` |
+| `D:\Wasbeer.git` | bare repo, pushed to over SSH |
+| `D:\Wasbeer` | working copy, `pull --ff-only` |
 | task `Wasbeer` | starts at boot, S4U so it needs no one logged in and no stored password |
 | rule `Wasbeer-In` | inbound TCP 8099, **local subnet only** |
 

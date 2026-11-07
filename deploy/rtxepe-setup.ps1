@@ -10,7 +10,7 @@
 $ErrorActionPreference = 'Stop'
 
 $App     = 'Wasbeer'
-$Root    = 'C:\Wasbeer'
+$Root    = 'D:\Wasbeer'
 $Port    = 8099
 $Node    = 'C:\Program Files\nodejs\node.exe'
 $EnvFile = Join-Path $Root '.env'
@@ -19,7 +19,7 @@ if (-not (Test-Path $Root)) { throw "$Root is missing - run deploy.ps1 from GIGA
 if (-not (Test-Path $Node)) { throw "node not found at $Node" }
 
 # --- git safety: the task may run as a different identity than the one that cloned
-& git config --global --add safe.directory 'C:/Wasbeer' 2>$null
+& git config --global --add safe.directory 'D:/Wasbeer' 2>$null
 $global:LASTEXITCODE = 0
 
 # --- .env ------------------------------------------------------------------

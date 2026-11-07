@@ -18,8 +18,9 @@ $App   = 'Wasbeer'
 $Box   = 'ljack@192.168.2.3'
 $Host4 = '192.168.2.3'
 $Port  = 8099
-$Bare  = 'C:\Wasbeer.git'
-$Work  = 'C:\Wasbeer'
+$Bare  = 'D:\Wasbeer.git'
+$Work  = 'D:\Wasbeer'
+$Url   = 'ljack@192.168.2.3:D:/Wasbeer.git'
 $Key   = Join-Path $env:USERPROFILE '.ssh\id_ed25519_wasbeer'
 $Repo  = Split-Path -Parent $MyInvocation.MyCommand.Path
 
@@ -41,9 +42,16 @@ Remote "if (-not (Test-Path '$Bare')) { git init --bare '$Bare' | Out-Null; '  c
 Write-Host "3/6 pushing"
 $env:GIT_SSH_COMMAND = "ssh -i `"$Key`" -o BatchMode=yes"
 if (-not (git -C $Repo remote | Select-String -Quiet '^rtxepe$')) {
-  git -C $Repo remote add rtxepe "ssh://$Box/$($Bare -replace '\\','/')"
+  git -C $Repo remote add rtxepe $Url
   "  remote 'rtxepe' added"
 }
+git -C $Repo remote set-url rtxepe $Url
+# RTX-EPE's SSH shell is cmd, which mangles the quotes git puts around the
+# remote path. Running the remote git through PowerShell avoids that -- the same
+# trick PoseGenerator's remote uses. git is on RTX-EPE's PATH, so no full path
+# is needed (and the real one has a space in it).
+git -C $Repo config remote.rtxepe.receivepack 'powershell -NoProfile -Command git receive-pack'
+git -C $Repo config remote.rtxepe.uploadpack  'powershell -NoProfile -Command git upload-pack'
 git -C $Repo push -q rtxepe main
 if ($LASTEXITCODE) { throw "push failed" }
 "  pushed $(git -C $Repo rev-parse --short HEAD)"
