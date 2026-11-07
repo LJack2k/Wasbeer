@@ -196,6 +196,22 @@ export function createAmbient(canvas) {
   const cur = { ...target };
   let tintTarget = tempKey(null), tintPrev = 'warm', tintMix = 1;
 
+  // the small porthole in the status card, drawn from this same engine so the
+  // two never disagree about what the machine is doing
+  let port = null, portCtx = null, portDpr = 1;
+  let drumAngle = 0;
+  const laundry = [
+    { r: 0.56, a: 0.0, w: 0.30, h: 0.19, c: '#d9604f', wob: 1.1 },
+    { r: 0.48, a: 2.1, w: 0.26, h: 0.21, c: '#e8b84b', wob: 0.8 },
+    { r: 0.58, a: 4.0, w: 0.31, h: 0.17, c: '#5aa6dc', wob: 1.4 },
+    { r: 0.30, a: 5.3, w: 0.22, h: 0.16, c: '#79c99a', wob: 0.6 },
+    { r: 0.38, a: 3.0, w: 0.20, h: 0.14, c: '#cfd6de', wob: 1.0 },
+  ];
+
+  // one-off events: a surge when filling, a drain at the top of the spin,
+  // a bloom when it finishes. Smooth eases have no punctuation without these.
+  let pulseKind = null, pulseT = 0;
+
   const bubbles = [];
   const foam = [];
   const drops = [];     // condensation on the glass
@@ -540,6 +556,142 @@ export function createAmbient(canvas) {
     }
   }
 
+  /* ----- the porthole ----- */
+
+  function drawPorthole(dt, time, slosh) {
+    if (!port) return;
+    const S = port.clientWidth;
+    if (!S) return;
+    if (port.width !== Math.round(S * portDpr)) {
+      portDpr = Math.min(devicePixelRatio || 1, 2);
+      port.width = port.height = Math.round(S * portDpr);
+      portCtx.setTransform(portDpr, 0, 0, portDpr, 0, 0);
+    }
+    const k = portCtx;
+    const cx = S / 2, cy = S / 2;
+    const rOuter = S * 0.46;        // progress ring
+    const rGlass = S * 0.355;
+    const T = THEMES[theme];
+
+    k.clearRect(0, 0, S, S);
+
+    // the drum turns with the tumble, and reverses with it
+    const spinning = cur.streaks > 0.3;
+    const dir = Math.tanh(Math.sin(time * 0.78) * 2.2);
+    drumAngle += dt * (spinning ? 11 : dir * 1.9 * cur.energy);
+
+    // --- progress ring ---
+    const pct = clamp((status?.progress ?? 0) / 100, 0, 1) * (status?.running ? 1 : 0);
+    k.lineWidth = S * 0.035;
+    k.lineCap = 'round';
+    k.strokeStyle = 'rgba(255,255,255,0.09)';
+    k.beginPath(); k.arc(cx, cy, rOuter, 0, TAU); k.stroke();
+    if (pct > 0.002) {
+      k.strokeStyle = T.tint[tintTarget];
+      k.shadowColor = T.tint[tintTarget];
+      k.shadowBlur = S * 0.06;
+      k.beginPath();
+      k.arc(cx, cy, rOuter, -Math.PI / 2, -Math.PI / 2 + TAU * pct);
+      k.stroke();
+      k.shadowBlur = 0;
+    }
+
+    // --- inside the glass ---
+    k.save();
+    k.beginPath(); k.arc(cx, cy, rGlass, 0, TAU); k.clip();
+
+    k.fillStyle = 'rgba(0,0,0,0.55)';
+    k.fillRect(0, 0, S, S);
+
+    // perforated drum wall, rotating
+    k.save();
+    k.translate(cx, cy); k.rotate(drumAngle);
+    for (const [rr, n] of [[0.86, 18], [0.63, 13], [0.4, 8]]) {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * TAU;
+        const hx = Math.cos(a) * rGlass * rr, hy = Math.sin(a) * rGlass * rr;
+        k.fillStyle = 'rgba(0,0,0,0.5)';
+        k.beginPath(); k.arc(hx, hy, S * 0.014, 0, TAU); k.fill();
+        k.fillStyle = 'rgba(255,255,255,0.1)';
+        k.beginPath(); k.arc(hx, hy + S * 0.006, S * 0.011, 0, Math.PI); k.fill();
+      }
+    }
+    // tumbling laundry
+    for (const L of laundry) {
+      const wob = Math.sin(time * L.wob + L.a) * 0.1;
+      const a = L.a + wob;
+      const lx = Math.cos(a) * rGlass * L.r, ly = Math.sin(a) * rGlass * L.r;
+      k.save();
+      k.translate(lx, ly);
+      k.rotate(a + Math.PI / 2 + wob * 2);
+      const w = rGlass * L.w, h = rGlass * L.h;
+      const g = k.createLinearGradient(0, -h, 0, h);
+      g.addColorStop(0, L.c);
+      g.addColorStop(1, 'rgba(0,0,0,0.55)');
+      k.fillStyle = g;
+      k.globalAlpha = 0.93;
+      k.beginPath();
+      k.roundRect(-w, -h, w * 2, h * 2, h * 0.8);
+      k.fill();
+      k.restore();
+    }
+    k.restore();
+
+    // water inside the drum, sloshing with the page
+    if (cur.level > 0.04) {
+      const top = cy + rGlass - (rGlass * 2) * clamp(cur.level, 0, 1);
+      const amp = rGlass * 0.07 * (0.4 + cur.energy);
+      k.beginPath();
+      k.moveTo(cx - rGlass * 1.2, S);
+      k.lineTo(cx - rGlass * 1.2, top);
+      for (let x = -1.2; x <= 1.2; x += 0.12) {
+        const px = cx + rGlass * x;
+        k.lineTo(px, top + Math.sin(x * 7 + time * 2.4 + slosh * 0.05) * amp);
+      }
+      k.lineTo(cx + rGlass * 1.2, S);
+      k.closePath();
+      const [wr, wg, wb] = T.water;
+      const wgrad = k.createLinearGradient(0, top, 0, S);
+      wgrad.addColorStop(0, `rgba(${wr},${wg},${wb},0.62)`);
+      wgrad.addColorStop(1, `rgba(${wr},${wg},${wb},0.34)`);
+      k.fillStyle = wgrad;
+      k.fill();
+      k.globalCompositeOperation = 'screen';
+      k.strokeStyle = 'rgba(255,255,255,0.18)';
+      k.lineWidth = 1.2; k.stroke();
+      k.globalCompositeOperation = 'source-over';
+
+      // the same bubble sprites, small
+      const n = Math.round(12 + cur.energy * 26);
+      for (let i = 0; i < n; i++) {
+        const sp = sprites[(i * 3) % 5];
+        const bx = cx + Math.sin(i * 2.7 + time * 0.6) * rGlass * 0.85;
+        const by = S - ((time * (30 + i * 9) + i * 70) % (S - top)) ;
+        if (by < top) continue;
+        const size = sp.pad * 2 * 0.42;
+        k.globalAlpha = 0.5;
+        k.drawImage(sp.canvas, bx - size / 2, by - size / 2, size, size);
+      }
+      k.globalAlpha = 1;
+    }
+
+    // glass highlight
+    const shine = k.createLinearGradient(cx - rGlass, cy - rGlass, cx + rGlass * 0.3, cy + rGlass);
+    shine.addColorStop(0, 'rgba(255,255,255,0.26)');
+    shine.addColorStop(0.5, 'rgba(255,255,255,0.02)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    k.fillStyle = shine;
+    k.fillRect(0, 0, S, S);
+    k.restore();
+
+    // rim and hinge
+    k.lineWidth = S * 0.028;
+    k.strokeStyle = 'rgba(255,255,255,0.14)';
+    k.beginPath(); k.arc(cx, cy, rGlass, 0, TAU); k.stroke();
+    k.fillStyle = 'rgba(255,255,255,0.14)';
+    k.beginPath(); k.arc(cx - rOuter * 0.98, cy, S * 0.018, 0, TAU); k.fill();
+  }
+
   /* ----- frame ----- */
 
   function draw(dt, time) {
@@ -670,6 +822,47 @@ export function createAmbient(canvas) {
     v.addColorStop(1, 'rgba(0,0,0,0.42)');
     ctx.fillStyle = v;
     ctx.fillRect(0, 0, W, H);
+
+    // --- transition moments ---
+    if (pulseT > 0) {
+      const dur = { fill: 1.6, drain: 1.4, done: 2.4 }[pulseKind] ?? 1.5;
+      pulseT = Math.max(0, pulseT - dt / dur);
+      const p = pulseT;            // 1 -> 0
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+
+      if (pulseKind === 'fill') {
+        // a surge of water climbing the screen
+        const y = H - (1 - p) * H * 0.9;
+        const g = ctx.createLinearGradient(0, y, 0, y + 220);
+        g.addColorStop(0, `rgba(190,235,255,0)`);
+        g.addColorStop(0.4, `rgba(190,235,255,${0.3 * p})`);
+        g.addColorStop(1, `rgba(190,235,255,0)`);
+        ctx.fillStyle = g;
+        ctx.fillRect(0, y, W, 220);
+      } else if (pulseKind === 'drain') {
+        // the water leaving, as a band falling away
+        const y = (1 - p) * H * 1.2 - 150;
+        const g = ctx.createLinearGradient(0, y, 0, y + 190);
+        g.addColorStop(0, 'rgba(255,255,255,0)');
+        g.addColorStop(0.5, `rgba(210,240,255,${0.26 * p})`);
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, y, W, 190);
+      } else if (pulseKind === 'done') {
+        const r = (1 - p) * Math.max(W, H) * 0.9;
+        const g = ctx.createRadialGradient(W / 2, H * 0.42, r * 0.55, W / 2, H * 0.42, r);
+        g.addColorStop(0, 'rgba(255,255,255,0)');
+        g.addColorStop(0.75, `rgba(200,255,235,${0.3 * p})`);
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, W, H);
+      }
+      ctx.restore();
+      if (pulseT === 0) pulseKind = null;
+    }
+
+    drawPorthole(dt, time, slosh);
   }
 
   /* ----- loop ----- */
@@ -719,6 +912,13 @@ export function createAmbient(canvas) {
       if (reduce) draw(0.016, 0);
     },
     setQuality(t) { setTier(clamp(t, 0, 2)); },
+    /** Draw the status-card porthole from this same engine, in the same frame. */
+    attachPorthole(c) {
+      port = c;
+      portCtx = c?.getContext('2d') ?? null;
+    },
+    /** 'fill' | 'drain' | 'done' -- a one-off moment, not a state change. */
+    pulse(kind) { pulseKind = kind; pulseT = 1; },
     /** Bubble multiplier, 0.25x .. 12x. Past ~4x this is a joke setting. */
     setDensity(d) {
       density = clamp(Number(d) || 1, 0.25, 30);

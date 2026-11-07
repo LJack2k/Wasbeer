@@ -139,69 +139,6 @@ function tintFor(fav) {
   return '#e2695f';
 }
 
-/* ---------------- the machine drawing ---------------- */
-
-function buildDrum() {
-  // perforations, so rotation is actually visible
-  const holes = $('#holes');
-  for (const [r, n] of [[48, 16], [34, 12], [20, 8]]) {
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2;
-      holes.append(svg('circle', {
-        cx: (100 + Math.cos(a) * r).toFixed(1),
-        cy: (100 + Math.sin(a) * r).toFixed(1),
-        r: 2.6,
-      }));
-    }
-  }
-  $('#wave').setAttribute('d', 'M-20,12 Q5,0 30,12 T80,12 T130,12 T180,12 T230,12 L230,220 L-20,220 Z');
-
-  const bubbles = $('#bubbles');
-  for (let i = 0; i < 9; i++) {
-    const c = svg('circle', { cx: 44 + i * 14, cy: 150 + (i % 3) * 10, r: 2 + (i % 4) });
-    c.style.setProperty('--bt', `${2.4 + (i % 5) * 0.55}s`);
-    c.style.animationDelay = `${(i * 0.37) % 3}s`;
-    bubbles.append(c);
-  }
-}
-
-const WATER_COLOUR = (t) => {
-  if (t === 'cold' || Number(t) <= 20) return '#5aa9e6';
-  if (Number(t) <= 30) return '#4a90d0';
-  if (Number(t) <= 40) return '#46b8a8';
-  if (Number(t) <= 60) return '#e09a4a';
-  if (Number(t) >= 70) return '#e2695f';
-  return '#4a90d0';
-};
-
-function drawMachine(s) {
-  const ring = $('#ring');
-  const drum = $('#drum');
-  const bubbles = $('#bubbles');
-  const water = $('#water');
-  const C = 502.6; // 2 * pi * 80
-
-  const running = Boolean(s?.running);
-  const phase = s?.jobPhase ?? s?.jobState ?? null;
-  const pct = running ? (s.progress ?? 0) : 0;
-
-  ring.style.strokeDashoffset = String(C * (1 - pct / 100));
-  ring.style.stroke = running ? 'var(--run)' : (s ? 'var(--accent)' : 'var(--line)');
-
-  // drum: slow tumble while washing, fast while spinning, still when idle
-  const speed = !running ? null : phase === 'spin' ? '0.65s' : phase === 'dry' ? '3s' : '6s';
-  drum.classList.toggle('still', !speed);
-  drum.style.setProperty('--drum-speed', speed ?? '0s');
-  drum.style.animationName = speed ? 'tumble' : 'none';
-
-  // water: high while washing or rinsing, drained for spin or drying
-  const wet = running && (phase === 'wash' || phase === 'rinse' || phase === 'weightSensing');
-  water.style.setProperty('--water-y', wet ? '48px' : '128px');
-  $('#wave').style.fill = WATER_COLOUR(s?.waterTemperature);
-
-  bubbles.classList.toggle('on', Boolean(wet && !document.body.classList.contains('reduce')));
-}
-
 /* ---------------- status ---------------- */
 
 function renderStatus() {
@@ -210,7 +147,7 @@ function renderStatus() {
   const rem = $('#remaining');
   const eta = $('#eta');
 
-  drawMachine(STATUS);
+  // the porthole is drawn by the ambient engine, in its own frame loop
   ambient?.setStatus(STATUS);
 
   if (!STATUS) {
@@ -236,8 +173,6 @@ function renderStatus() {
     ? `${cyc.label}${s.cycleType ? ` · ${TYPE[s.cycleType] ?? s.cycleType}` : ''}`
     : (s.cycle ? `Programma ${s.cycle}` : 'Geen programma gekozen');
 
-  rem.textContent = s.running && s.remainingTime ? minutes(s.remainingTime) : '';
-  eta.textContent = s.running && s.remainingTime ? `klaar om ${clockIn(s.remainingTime)}` : '';
 
   // phases, with the ones already behind us dimmed
   const phases = $('#phases');
@@ -283,9 +218,126 @@ function renderStatus() {
     banner.hidden = true;
   }
 
+  // --- moments, not states ---
+  const phase = s.running ? (s.jobPhase ?? s.jobState ?? 'run')
+    : (s.operatingState === 'paused' ? 'paused' : 'idle');
+  if (lastPhase !== null && phase !== lastPhase) {
+    if (phase === 'weightSensing' || (phase === 'wash' && lastPhase === 'idle')) ambient?.pulse('fill');
+    else if (phase === 'spin') ambient?.pulse('drain');
+    else if (phase === 'idle' && lastPhase !== 'paused') ambient?.pulse('done');
+  }
+  lastPhase = phase;
+
+  syncClock(s);
+  paintClock();
+
   // the wash just finished
   if (wasRunning === true && !s.running) celebrate();
   wasRunning = s.running;
+}
+
+/* ---------------- live countdown, tab title, favicon ---------------- */
+
+let lastPhase = null;
+let endsAt = null;
+let ticker = null;
+
+/**
+ * Anchor an absolute end time from the poll, then count down locally. The API
+ * only reports whole minutes, so re-anchoring on every poll would make the
+ * seconds jump; keep the old end time unless the new reading disagrees by more
+ * than 90 seconds.
+ */
+function syncClock(s) {
+  if (!s?.running || s.remainingTime == null) { endsAt = null; return; }
+  const predicted = Date.now() + s.remainingTime * 60000;
+  if (endsAt === null || Math.abs(predicted - endsAt) > 90000) endsAt = predicted;
+}
+
+function countdown(ms) {
+  const t = Math.max(0, Math.round(ms / 1000));
+  const h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), sec = t % 60;
+  const mm = String(m).padStart(2, '0'), ss = String(sec).padStart(2, '0');
+  return h ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
+const favCanvas = document.createElement('canvas');
+function paintFavicon(pct, colour) {
+  favCanvas.width = favCanvas.height = 32;
+  const k = favCanvas.getContext('2d');
+  k.clearRect(0, 0, 32, 32);
+  k.lineWidth = 5; k.lineCap = 'round';
+  k.strokeStyle = 'rgba(255,255,255,0.22)';
+  k.beginPath(); k.arc(16, 16, 12, 0, Math.PI * 2); k.stroke();
+  if (pct > 0.005) {
+    k.strokeStyle = colour;
+    k.beginPath(); k.arc(16, 16, 12, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct); k.stroke();
+  } else {
+    k.fillStyle = colour;
+    k.beginPath(); k.arc(16, 16, 5, 0, Math.PI * 2); k.fill();
+  }
+  let link = document.querySelector('link[rel=icon]');
+  if (!link) { link = el('link', { rel: 'icon' }); document.head.append(link); }
+  link.href = favCanvas.toDataURL('image/png');
+}
+
+function paintClock() {
+  const s = STATUS;
+  const rem = $('#remaining'), eta = $('#eta');
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--run').trim() || '#4fb8e8';
+
+  if (!s) {
+    rem.textContent = ''; eta.textContent = '';
+    document.title = 'Wasbeer — geen verbinding';
+    paintFavicon(0, '#e2695f');
+    return;
+  }
+  if (!s.running || endsAt === null) {
+    rem.textContent = ''; eta.textContent = '';
+    document.title = s.operatingState === 'paused' ? 'Gepauzeerd · Wasbeer' : 'Klaar · Wasbeer';
+    paintFavicon(0, s.operatingState === 'paused' ? '#e0a23c' : '#3fc3b0');
+    return;
+  }
+  const left = endsAt - Date.now();
+  const text = countdown(left);
+  rem.textContent = text;
+  eta.textContent = `klaar om ${new Date(endsAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
+  document.title = `${text} · ${PHASE[s.jobPhase] ?? 'wassen'} · Wasbeer`;
+  paintFavicon((s.progress ?? 0) / 100, accent);
+}
+
+/* ---------------- monitor mode ---------------- */
+
+let monitor = false;
+let idleTimer = null;
+
+function toggleMonitor(force) {
+  monitor = force ?? !monitor;
+  document.body.classList.toggle('monitor', monitor);
+  try { localStorage.setItem('wasbeer-monitor', monitor ? '1' : '0'); } catch { /* */ }
+
+  if (monitor) {
+    document.documentElement.requestFullscreen?.().catch(() => { /* needs a gesture; fine without */ });
+    armIdle();
+  } else {
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    clearTimeout(idleTimer);
+    document.body.classList.remove('dim');
+  }
+}
+
+/** In monitor mode, fade the furniture after a minute of no pointer movement. */
+function armIdle() {
+  clearTimeout(idleTimer);
+  document.body.classList.remove('dim');
+  if (!monitor) return;
+  idleTimer = setTimeout(() => document.body.classList.add('dim'), 60000);
+}
+addEventListener('pointermove', () => { if (monitor) armIdle(); }, { passive: true });
+
+/** Cards gain a scrim as the bubbles pile up, so zeepfeest stays readable. */
+function applyScrim(density) {
+  document.documentElement.style.setProperty('--scrim', String(Math.min(0.5, 0.045 * density)));
 }
 
 function celebrate() {
@@ -666,10 +718,12 @@ function buildDebugBar() {
       ambient?.setDensity(density);
       bubbleVal.textContent = `${density}× — ${moodFor(density)}`;
       debugEl?.classList.toggle('silly', density > 15);
+      applyScrim(density);
       try { localStorage.setItem('wasbeer-density', String(density)); } catch { /* */ }
     },
   });
   bubbleVal.textContent = `${density}× — ${moodFor(density)}`;
+  applyScrim(density);
   ambient?.setDensity(density);
 
   const body = el('div', { className: 'debug-body' }, [
@@ -733,18 +787,27 @@ async function refreshStatus() {
 
 (async function init() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.body.classList.add('reduce');
-  buildDrum();
 
   ambient = createAmbient($('#ambient'));
+  ambient.attachPorthole($('#porthole'));
+  ticker = setInterval(paintClock, 1000);
+
   let saved = 'water';
   try { saved = localStorage.getItem('wasbeer-theme') ?? 'water'; } catch { /* private mode */ }
   applyTheme(saved);
 
   $('#sheet').addEventListener('click', (e) => { if (e.target.dataset.close !== undefined) closeSheet(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
   $('#add').onclick = () => openEditor(null);
   $('#refresh').onclick = refreshStatus;
   $('#theme-btn').onclick = openThemeSheet;
+  $('#monitor-btn').onclick = () => toggleMonitor();
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { if (!$('#sheet').hidden) closeSheet(); else if (monitor) toggleMonitor(false); }
+    if (e.key === 'm' && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) toggleMonitor();
+  });
+
+  try { if (localStorage.getItem('wasbeer-monitor') === '1') toggleMonitor(true); } catch { /* */ }
 
   if (DEBUG_ALLOWED) buildDebugBar();
 

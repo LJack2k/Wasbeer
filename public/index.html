@@ -16,6 +16,7 @@
 <header class="topbar">
   <h1><span class="logo" id="logo">🦝</span> Wasbeer</h1>
   <div class="topbar-actions">
+    <button id="monitor-btn" class="icon-btn" title="Monitorweergave (M)" aria-label="Monitorweergave">&#9974;</button>
     <button id="theme-btn" class="icon-btn" title="Thema" aria-label="Thema wisselen">&#9728;</button>
     <button id="refresh" class="icon-btn" title="Verversen" aria-label="Verversen">&#10227;</button>
   </div>
@@ -29,36 +30,7 @@
       <section class="card status" aria-live="polite">
 
         <div class="machine">
-          <svg class="drum-svg" viewBox="0 0 200 200" role="img" aria-labelledby="drum-label">
-            <title id="drum-label">Toestand van de machine</title>
-            <defs>
-              <clipPath id="porthole"><circle cx="100" cy="100" r="60"/></clipPath>
-              <linearGradient id="glassShine" x1="0" y1="0" x2="0.6" y2="1">
-                <stop offset="0%" stop-color="#fff" stop-opacity=".3"/>
-                <stop offset="55%" stop-color="#fff" stop-opacity="0"/>
-              </linearGradient>
-            </defs>
-
-            <circle class="ring-track" cx="100" cy="100" r="80"/>
-            <circle id="ring" class="ring-progress" cx="100" cy="100" r="80"/>
-            <circle class="glass" cx="100" cy="100" r="60"/>
-
-            <g clip-path="url(#porthole)">
-              <g id="water" class="water"><path id="wave" class="wave" d=""/></g>
-              <g id="drum" class="drum">
-                <g class="holes" id="holes"></g>
-                <ellipse class="sock a" cx="100" cy="62"  rx="17" ry="11"/>
-                <ellipse class="sock b" cx="133" cy="112" rx="15" ry="12"/>
-                <ellipse class="sock c" cx="72"  cy="122" rx="18" ry="10"/>
-                <ellipse class="sock d" cx="100" cy="100" rx="12" ry="9"/>
-              </g>
-              <g id="bubbles" class="bubbles"></g>
-              <circle cx="100" cy="100" r="60" fill="url(#glassShine)" pointer-events="none"/>
-            </g>
-
-            <circle class="rim" cx="100" cy="100" r="60"/>
-            <circle class="hinge" cx="33" cy="100" r="4"/>
-          </svg>
+          <canvas id="porthole" class="porthole" role="img" aria-label="Toestand van de machine"></canvas>
 
           <div class="machine-read">
             <div id="state-text" class="state-text">Verbinden…</div>

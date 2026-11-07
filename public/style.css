@@ -112,9 +112,10 @@ main { padding: 0 var(--gutter) 56px; max-width: 760px; margin: 0 auto; }
 .small { font-size: 13px; }
 .center { text-align: center; }
 
-/* frosted panels floating over the field */
+/* frosted panels floating over the field.
+   --scrim rises with bubble density so the text survives zeepfeest. */
 .card {
-  background: var(--surface);
+  background: linear-gradient(rgba(0,0,0,var(--scrim, 0)), rgba(0,0,0,var(--scrim, 0))), var(--surface);
   backdrop-filter: blur(var(--blur)) saturate(1.3);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -133,47 +134,16 @@ main { padding: 0 var(--gutter) 56px; max-width: 760px; margin: 0 auto; }
     gap: 22px; align-items: start;
   }
   .col-main { position: sticky; top: 78px; }
-  .drum-svg { width: 168px; height: 168px; }
+  .porthole { width: 172px; height: 172px; }
   .remaining { font-size: 46px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
 }
 
 /* ---------- the machine ---------- */
 .machine { display: flex; align-items: center; gap: 16px; }
-.drum-svg { width: 126px; height: 126px; flex: none; }
+/* drawn by the ambient engine, so it always agrees with the background */
+.porthole { width: 126px; height: 126px; flex: none; display: block; }
 .machine-read { min-width: 0; flex: 1; }
-
-.ring-track { fill: none; stroke: color-mix(in srgb, var(--muted) 20%, transparent); stroke-width: 7; }
-.ring-progress {
-  fill: none; stroke: var(--run); stroke-width: 7; stroke-linecap: round;
-  transform: rotate(-90deg); transform-origin: 100px 100px;
-  stroke-dasharray: 502.6; stroke-dashoffset: 502.6;
-  transition: stroke-dashoffset .6s ease, stroke .4s ease;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--run) 60%, transparent));
-}
-.glass { fill: rgba(0, 0, 0, .45); }
-.rim { fill: none; stroke: var(--line); stroke-width: 5; }
-.hinge { fill: var(--line); }
-
-.water { transform: translateY(var(--water-y, 60px)); transition: transform .8s ease; }
-.wave { fill: var(--water, #4a90d0); opacity: .55; transition: fill .6s ease; }
-
-.drum { transform-origin: 100px 100px; animation: tumble var(--drum-speed) linear infinite; }
-@keyframes tumble { to { transform: rotate(360deg); } }
-.holes circle { fill: rgba(255,255,255,.08); }
-
-.sock.a { fill: #e8705f; }
-.sock.b { fill: #f0c05a; }
-.sock.c { fill: #6fb6e8; }
-.sock.d { fill: #8fd4a8; }
-
-.bubbles circle { fill: #fff; opacity: 0; }
-.bubbles.on circle { animation: rise var(--bt, 3s) ease-in infinite; }
-@keyframes rise {
-  0%   { transform: translateY(0) scale(.5); opacity: 0; }
-  20%  { opacity: .7; }
-  100% { transform: translateY(-85px) scale(1.1); opacity: 0; }
-}
 
 .state-text { font-size: 20px; font-weight: 650; letter-spacing: -.01em; }
 .remaining {
@@ -230,7 +200,8 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 
 .fav {
   position: relative; overflow: hidden;
-  background: var(--surface); backdrop-filter: blur(var(--blur)) saturate(1.3);
+  background: linear-gradient(rgba(0,0,0,var(--scrim, 0)), rgba(0,0,0,var(--scrim, 0))), var(--surface);
+  backdrop-filter: blur(var(--blur)) saturate(1.3);
   border: 1px solid var(--line); border-radius: var(--radius);
   padding: 14px; text-align: left; color: var(--text); min-height: 122px;
   display: flex; flex-direction: column; gap: 5px;
@@ -342,6 +313,40 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 }
 @keyframes toast-in { from { transform: translate(-50%, 14px); opacity: 0; } }
 .toast.bad { border-color: var(--danger); }
+
+/* ---------- monitor mode ---------- */
+/* Fullscreen glanceable view for the second screen: the status, nothing else. */
+body.monitor .topbar,
+body.monitor .col-side,
+body.monitor #banner:not([hidden]) ~ * .col-side { display: none; }
+
+body.monitor main { max-width: 1100px; padding-top: 4vh; }
+body.monitor .cols { display: block; }
+body.monitor .col-main { position: static; }
+
+body.monitor .card.status {
+  background: none; border: none; box-shadow: none; backdrop-filter: none;
+  padding: 0; text-align: center;
+}
+body.monitor .machine { flex-direction: column; gap: 2.2vh; }
+body.monitor .porthole { width: min(34vh, 320px); height: min(34vh, 320px); }
+body.monitor .state-text { font-size: clamp(22px, 3.6vh, 40px); }
+body.monitor .remaining {
+  font-size: clamp(64px, 17vh, 190px); line-height: 1; margin-top: 1vh;
+  text-shadow: 0 6px 40px rgba(0,0,0,.6);
+}
+body.monitor #eta { font-size: clamp(14px, 2.2vh, 24px); }
+body.monitor .phases, body.monitor .chips { justify-content: center; }
+body.monitor .phases span { font-size: clamp(12px, 1.6vh, 17px); padding: 5px 13px; }
+body.monitor .chip { font-size: clamp(13px, 1.7vh, 18px); padding: 6px 15px; }
+body.monitor .controls { justify-content: center; }
+
+/* after a minute untouched, let the numbers carry it */
+body.monitor.dim .controls,
+body.monitor.dim .chips,
+body.monitor.dim .debug { opacity: 0; pointer-events: none; }
+body.monitor.dim .phases { opacity: .35; }
+body.monitor .controls, body.monitor .chips, body.monitor .phases { transition: opacity 1.2s ease; }
 
 /* ---------- debug bar ---------- */
 /* Localhost only, or ?debug anywhere. Slides up from a 34px strip. */

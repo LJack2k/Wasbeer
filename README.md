@@ -287,6 +287,45 @@ changeable from a picker.
 
 Everything animated is behind `prefers-reduced-motion`.
 
+### The porthole
+
+Drawn by the ambient engine itself, into a second canvas, inside the same frame.
+It shares the bubble sprites, the water colour, the slosh and the easing, so the
+small view and the full-page view can never disagree about what the machine is
+doing. The drum reverses with the same `tanh(sin(t))` signal that drives the
+page slosh, and spins continuously during the spin phase.
+
+It replaced an SVG drum that had flat ellipses for laundry — fine before the
+background got good, cartoonish afterwards.
+
+### The clock actually runs
+
+The API reports whole minutes and we poll every 20 seconds, so a naive display
+sits frozen for twenty seconds at a time. Instead the poll anchors an absolute
+end time and the page counts down locally every second, showing `39:57` rather
+than `40 min`.
+
+Re-anchoring on every poll would make the seconds jump, so a new reading is only
+adopted if it disagrees with the running clock by more than 90 seconds.
+
+The document title carries it too — `39:57 · spoelen · Wasbeer` — and the
+favicon is drawn at runtime as a progress ring, so a background tab is readable
+from the tab strip.
+
+### Monitor mode
+
+`M`, or the button in the header. Hides all chrome, drops the favourites, and
+scales the countdown to `17vh` with the porthole at `34vh`. Requests fullscreen
+where the browser allows it, and after a minute without pointer movement the
+controls and chips fade out, leaving the numbers.
+
+### Moments
+
+Smooth eases have no punctuation, so three one-off pulses mark the transitions:
+a surge climbing the screen when filling starts, a band falling away when the
+spin drains, and a bloom when the cycle ends. They are events, not states — they
+fire on a phase change and decay in under two seconds.
+
 ### Layout
 
 The UI shows the machine state, phase breakdown and remaining time at the top,
