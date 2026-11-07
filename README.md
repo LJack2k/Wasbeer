@@ -237,6 +237,27 @@ Four rows:
 | **Temp** | Koud / 30 / 40 / 60 / 70 — drives the water colour and the page tint |
 | **Thema** | All four themes, one click each |
 | **Voortgang** | 0–100% slider, moves the ring and recomputes the remaining time |
+| **Bellen** | 0.25× – 30× bubble density, with the cost shown live |
+| **Grafisch** | Pin the quality tier, or watch the auto one |
+
+### The bubble slider
+
+Measured on a 1280×820 window during the wash phase:
+
+| | Bubbles | Frame | |
+|---|---|---|---|
+| 1× | 260 | 1.7 ms | normaal |
+| 7× | 1 820 | 4.0 ms | veel zeep |
+| 15× | 3 900 | 7.2 ms | zeepfeest 🫧 |
+| 30× | 7 800 | 17.2 ms | VEEL TE VEEL 🚨 |
+
+30× is 7 800 bubbles at roughly 58fps — the screen becomes a wall of foam with
+the UI barely legible through it, which is the entire point. Past 4× the size
+distribution also flattens, so it stops being fizz and becomes suds.
+
+Above 1.25× the automatic quality degradation stands down: that cost was asked
+for, so the engine stops trying to protect you from it. The readout turns amber
+once a frame goes over 16 ms.
 
 Anything other than **Live** puts the page into a simulated state: polling stops,
 the strip turns amber and names the phase. **Live** resumes real polling.

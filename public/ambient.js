@@ -189,6 +189,8 @@ export function createAmbient(canvas) {
   // quality tier: 2 full, 1 reduced, 0 minimal. Dropped automatically if slow.
   let tier = 2;
   let frameCost = 16;
+  // bubble multiplier. Above 1.25 the auto-degrade stands down: you asked for it.
+  let density = 1;
 
   let target = phaseShape(null);
   const cur = { ...target };
@@ -225,12 +227,34 @@ export function createAmbient(canvas) {
   function bubbleCount() {
     const area = (W * H) / 1000;
     const per = tier === 2 ? 0.34 : tier === 1 ? 0.18 : 0.08;
-    return Math.round(clamp(area * per, 30, tier === 2 ? 260 : 130));
+    const base = clamp(area * per, 30, tier === 2 ? 260 : 130);
+    // 8000 is roughly where the sprite blitter finally costs a 60fps frame
+    return Math.round(clamp(base * density, 8, 8000));
+  }
+
+  /**
+   * Add or remove bubbles to match the requested count, rather than reseeding.
+   * Dragging the slider across its range otherwise rebuilds the whole array on
+   * every input event.
+   */
+  function resizeBubblePool() {
+    const want = bubbleCount();
+    while (bubbles.length > want) bubbles.pop();
+    while (bubbles.length < want) bubbles.push(newBubble());
+
+    const wantFoam = Math.round(clamp((tier === 2 ? 110 : 50) * Math.sqrt(density), 10, 900));
+    while (foam.length > wantFoam) foam.pop();
+    while (foam.length < wantFoam) {
+      foam.push({ x: rand(0, W), r: rand(3, 14), off: rand(-7, 5), ph: rand(0, TAU), a: rand(0.3, 0.9) });
+    }
   }
 
   function newBubble(y) {
-    const bucket = Math.min(SPRITE_BUCKETS - 1, Math.floor(Math.pow(Math.random(), 2.1) * SPRITE_BUCKETS));
-    const scale = THEMES[theme].bubbleScale ?? 1;
+    // Normally heavily biased toward small bubbles. Crank the density and the
+    // distribution flattens, so it stops being fizz and becomes a wall of foam.
+    const bias = density > 4 ? 1.15 : density > 2 ? 1.6 : 2.1;
+    const bucket = Math.min(SPRITE_BUCKETS - 1, Math.floor(Math.pow(Math.random(), bias) * SPRITE_BUCKETS));
+    const scale = (THEMES[theme].bubbleScale ?? 1) * (density > 6 ? 1.3 : 1);
     return {
       x: rand(0, W), y: y ?? rand(0, H),
       bucket,
@@ -662,9 +686,11 @@ export function createAmbient(canvas) {
     draw(dt, now);
     frameCost = lerp(frameCost, performance.now() - t0, 0.08);
 
-    // if we cannot hold ~60fps, shed detail rather than stutter all day
-    if (frameCost > 13 && tier > 0) { if (++slowFrames > 90) { setTier(tier - 1); slowFrames = 0; } }
-    else slowFrames = Math.max(0, slowFrames - 1);
+    // If we cannot hold ~60fps, shed detail rather than stutter all day -- but
+    // not when the bubble slider has been cranked. That cost was requested.
+    if (density <= 1.25 && frameCost > 13 && tier > 0) {
+      if (++slowFrames > 90) { setTier(tier - 1); slowFrames = 0; }
+    } else slowFrames = Math.max(0, slowFrames - 1);
   }
 
   const start = () => { if (!raf && !reduce) { last = performance.now() / 1000; raf = requestAnimationFrame(frame); } };
@@ -693,6 +719,19 @@ export function createAmbient(canvas) {
       if (reduce) draw(0.016, 0);
     },
     setQuality(t) { setTier(clamp(t, 0, 2)); },
+    /** Bubble multiplier, 0.25x .. 12x. Past ~4x this is a joke setting. */
+    setDensity(d) {
+      density = clamp(Number(d) || 1, 0.25, 30);
+      resizeBubblePool();
+    },
+    /** Render n frames synchronously and report the cost. Works with the tab
+     *  hidden, where requestAnimationFrame does not run at all. */
+    benchmark(n = 30) {
+      const t0 = performance.now();
+      for (let i = 0; i < n; i++) draw(1 / 60, i / 60);
+      const ms = (performance.now() - t0) / n;
+      return { ms: Math.round(ms * 100) / 100, fps: Math.round(1000 / ms), bubbles: bubbles.length, density };
+    },
     /** Jump straight to the target state instead of easing -- the debug bar
      *  wants the phase it just selected, not a three-second fade into it. */
     snap() {
@@ -704,8 +743,9 @@ export function createAmbient(canvas) {
       tier, frameCost: Math.round(frameCost * 10) / 10, bubbles: bubbles.length,
       phase: phaseShape(status).label,
       level: Math.round(cur.level * 100) / 100,
+      density,
+      fps: Math.round(1000 / Math.max(frameCost, 1)),
       targetLevel: target.level,
-      jobPhase: status?.jobPhase ?? null,
     }),
     destroy() {
       stop();

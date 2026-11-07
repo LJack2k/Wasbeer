@@ -647,11 +647,37 @@ function buildDebugBar() {
 
   const stats = el('span', { className: 'debug-stats', textContent: '—' });
 
+  // --- bubbles ---
+  const MOODS = [
+    [0.5, 'kalm'], [1.25, 'normaal'], [3, 'bruisend'], [7, 'veel zeep'],
+    [15, 'zeepfeest 🫧'], [Infinity, 'VEEL TE VEEL 🚨'],
+  ];
+  const moodFor = (d) => MOODS.find(([max]) => d <= max)[1];
+
+  let density = 1;
+  try { density = Number(localStorage.getItem('wasbeer-density')) || 1; } catch { /* */ }
+
+  const bubbleVal = el('span', { className: 'debug-val wide' });
+  const bubbleSlider = el('input', {
+    type: 'range', min: '0.25', max: '30', step: '0.25', value: String(density),
+    className: 'debug-range',
+    oninput: (e) => {
+      density = Number(e.target.value);
+      ambient?.setDensity(density);
+      bubbleVal.textContent = `${density}× — ${moodFor(density)}`;
+      debugEl?.classList.toggle('silly', density > 15);
+      try { localStorage.setItem('wasbeer-density', String(density)); } catch { /* */ }
+    },
+  });
+  bubbleVal.textContent = `${density}× — ${moodFor(density)}`;
+  ambient?.setDensity(density);
+
   const body = el('div', { className: 'debug-body' }, [
     row('Fase', phaseBtns),
     row('Temp', tempBtns),
     row('Thema', themeBtns),
     row('Voortgang', [slider, el('span', { className: 'debug-val', textContent: `${fake.progress}%` })]),
+    row('Bellen', [bubbleSlider, bubbleVal]),
     row('Grafisch', [...qualityBtns, stats]),
   ]);
 
@@ -660,7 +686,8 @@ function buildDebugBar() {
     if (!debugEl?.classList.contains('open')) return;
     const s = ambient?.stats();
     if (!s) return;
-    stats.textContent = `tier ${s.tier} · ${s.frameCost}ms · ${s.bubbles} bellen · ${s.phase} · water ${s.level}`;
+    stats.textContent = `${s.bubbles} bellen · ${s.frameCost}ms (~${s.fps}fps) · tier ${s.tier} · ${s.phase}`;
+    stats.classList.toggle('hot', s.frameCost > 16);
     for (const b of debugEl.querySelectorAll('[data-quality]')) {
       b.setAttribute('aria-pressed', String(Number(b.dataset.quality) === s.tier));
     }

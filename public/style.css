@@ -385,6 +385,12 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px;
   color: var(--muted); margin-left: 6px; white-space: nowrap;
 }
+/* frame budget blown -- you can see it, so say it */
+.debug-stats.hot { color: var(--warn); }
+.debug-val.wide { min-width: 142px; font-size: 11.5px; }
+/* past 7x the strip admits what you've done */
+.debug.silly .debug-toggle { color: var(--danger); }
+.debug.silly .debug-val.wide { color: var(--danger); font-weight: 700; }
 
 /* the bar covers the bottom of the page, so give content somewhere to end */
 body.has-debug { padding-bottom: 40px; }
