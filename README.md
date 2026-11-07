@@ -454,6 +454,47 @@ This means the process needs write access to `.env`.
 fine — the machine still ignores everything unless Smart Control is pressed on
 its panel — but do not put it on the open internet as it stands.
 
+## Deployment
+
+Developed on **GIGA-CARL** (192.168.2.14), hosted on **RTX-EPE** (192.168.2.3),
+which already had Node 24 and git — nothing needed installing.
+
+```
+powershell -File deploy.ps1
+```
+
+Idempotent and rerunnable. It pushes committed code to a bare repo on RTX-EPE,
+fast-forwards the working copy, runs `deploy\rtxepe-setup.ps1` there, restarts
+the task, and checks the app answers.
+
+| On RTX-EPE | |
+|---|---|
+| `C:\Wasbeer.git` | bare repo, pushed to over SSH |
+| `C:\Wasbeer` | working copy, `pull --ff-only` |
+| task `Wasbeer` | starts at boot, S4U so it needs no one logged in and no stored password |
+| rule `Wasbeer-In` | inbound TCP 8099, **local subnet only** |
+
+Everything it creates is prefixed `Wasbeer`. It touches nothing belonging to
+PoseGenerator, and 8099 was free there (8189, 8002, 8443 and 11434 are not).
+
+**The token is not deployed.** `.env` is created with the device id and port but
+no token, because a token only lives 24 hours — paste it through the app's 🔑
+page instead, which writes that same file. `.env` is never overwritten once it
+exists, so a redeploy will not wipe your token.
+
+### One-time prerequisite
+
+The deploy uses its own key, `id_ed25519_wasbeer`, rather than PoseGenerator's.
+Installing it has to be done by hand, once — appending to an `authorized_keys`
+file grants persistent remote access, so it is not something a script should do
+on your behalf:
+
+```
+ssh -i $env:USERPROFILE\.ssh\id_ed25519_rtxepe ljack@192.168.2.3 "powershell -NoProfile -Command \"Add-Content -Path C:\ProgramData\ssh\administrators_authorized_keys -Value '<contents of id_ed25519_wasbeer.pub>'\""
+```
+
+Append only — never rewrite that file, and leave its permissions alone.
+
 ## Scripts
 
 ```
