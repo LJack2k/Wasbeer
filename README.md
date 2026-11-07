@@ -312,6 +312,18 @@ The document title carries it too — `39:57 · spoelen · Wasbeer` — and the
 favicon is drawn at runtime as a progress ring, so a background tab is readable
 from the tab strip.
 
+### The phase timeline
+
+The cycle is one proportional bar rather than three pills. Segment widths follow
+the scheduled durations, so a 100-minute wash is visibly five times the
+15-minute spin, and the fill comes from overall progress distributed across the
+segments — which means it also answers "how far into *this* phase am I", which
+the pills never showed.
+
+Durations are always rendered and CSS decides whether there is room: only the
+current phase in the narrow status card, all of them in the wide layout and in
+monitor mode.
+
 ### Monitor mode
 
 `M`, or the button in the header. Hides all chrome, drops the favourites, and

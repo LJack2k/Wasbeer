@@ -175,19 +175,7 @@ function renderStatus() {
 
 
   // phases, with the ones already behind us dimmed
-  const phases = $('#phases');
-  phases.replaceChildren();
-  if (s.running && s.phases?.length) {
-    let seen = false;
-    for (const p of s.phases) {
-      const now = p.phaseName === s.jobPhase;
-      if (now) seen = true;
-      phases.append(el('span', {
-        className: now ? 'now' : (seen ? '' : 'done'),
-        textContent: `${PHASE[p.phaseName] ?? p.phaseName} ${p.timeInMin}m`,
-      }));
-    }
-  }
+  renderTimeline(s);
 
   const chips = $('#current-opts');
   chips.replaceChildren();
@@ -234,6 +222,54 @@ function renderStatus() {
   // the wash just finished
   if (wasRunning === true && !s.running) celebrate();
   wasRunning = s.running;
+}
+
+/* ---------------- phase timeline ---------------- */
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+
+/**
+ * The cycle as one proportional bar rather than three floating pills.
+ *
+ * Segment widths follow the scheduled durations, so a 100-minute wash is
+ * visibly five times the 15-minute spin. Fill comes from overall progress
+ * distributed across the segments, which means the bar also answers "how far
+ * into this phase am I" -- something the pills never showed.
+ */
+function renderTimeline(s) {
+  const wrap = $('#phases');
+  wrap.replaceChildren();
+
+  const list = s?.phases ?? [];
+  if (!s?.running || !list.length) return;
+
+  const total = list.reduce((n, p) => n + (p.timeInMin || 0), 0) || 1;
+  const elapsed = total * clamp((s.progress ?? 0) / 100, 0, 1);
+
+  const bar = el('div', { className: 'timeline' });
+  let start = 0;
+  for (const p of list) {
+    const dur = p.timeInMin || 1;
+    const fill = clamp((elapsed - start) / dur, 0, 1);
+    start += dur;
+
+    const isNow = p.phaseName === s.jobPhase;
+    // Durations are always emitted; CSS decides whether there is room for them
+    // (only the current phase in the narrow card, all of them in monitor mode).
+    const seg = el('div', {
+      className: `tseg${isNow ? ' now' : ''}${fill >= 1 && !isNow ? ' done' : ''}`,
+    }, [
+      el('div', { className: 'tseg-track' }, el('div', { className: 'tseg-fill' })),
+      el('div', { className: 'tseg-label' }, [
+        el('b', { textContent: PHASE[p.phaseName] ?? p.phaseName }),
+        el('span', { textContent: `${dur}m` }),
+      ]),
+    ]);
+    seg.style.flexGrow = String(dur);
+    seg.querySelector('.tseg-fill').style.width = `${(fill * 100).toFixed(1)}%`;
+    bar.append(seg);
+  }
+  wrap.append(bar);
 }
 
 /* ---------------- live countdown, tab title, favicon ---------------- */
