@@ -1,0 +1,18 @@
+{
+  "name": "wasbeer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Favourites-first control panel for a Samsung WD80T654ABH washer-dryer via the SmartThings API",
+  "scripts": {
+    "probe": "node --env-file-if-exists=.env scripts/probe.mjs",
+    "validate": "node scripts/validate-catalog.mjs",
+    "dry-run": "node scripts/dry-run.mjs",
+    "capabilities": "node --env-file-if-exists=.env scripts/capabilities.mjs",
+    "dev": "node --env-file-if-exists=.env --watch src/server.mjs",
+    "start": "node --env-file-if-exists=.env src/server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

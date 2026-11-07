@@ -1,0 +1,608 @@
+{
+  "switch": {
+    "commands": {
+      "off": [],
+      "on": []
+    },
+    "attributes": [
+      "switch"
+    ]
+  },
+  "refresh": {
+    "commands": {
+      "refresh": []
+    },
+    "attributes": []
+  },
+  "remoteControlStatus": {
+    "commands": {},
+    "attributes": [
+      "remoteControlEnabled"
+    ]
+  },
+  "washerOperatingState": {
+    "commands": {
+      "setMachineState": [
+        {
+          "name": "state",
+          "type": "string",
+          "enum": [
+            "pause",
+            "run",
+            "stop"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "completionTime",
+      "machineState",
+      "washerJobState",
+      "supportedMachineStates"
+    ]
+  },
+  "execute": {
+    "commands": {
+      "execute": [
+        {
+          "name": "command",
+          "type": "string",
+          "enum": null,
+          "optional": false
+        },
+        {
+          "name": "args",
+          "type": "object",
+          "enum": null,
+          "optional": true
+        }
+      ]
+    },
+    "attributes": [
+      "data"
+    ]
+  },
+  "custom.supportedOptions": {
+    "commands": {
+      "setCourse": [
+        {
+          "name": "course",
+          "type": "string",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "course",
+      "referenceTable",
+      "supportedCourses"
+    ]
+  },
+  "custom.washerWaterTemperature": {
+    "commands": {
+      "setWasherWaterTemperature": [
+        {
+          "name": "temperature",
+          "type": "string",
+          "enum": [
+            "none",
+            "20",
+            "30",
+            "40",
+            "50",
+            "60",
+            "65",
+            "70",
+            "75",
+            "80",
+            "90",
+            "95",
+            "tapCold",
+            "cold",
+            "cool",
+            "ecoWarm",
+            "warm",
+            "semiHot",
+            "hot",
+            "extraHot",
+            "extraLow",
+            "low",
+            "mediumLow",
+            "medium",
+            "high"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "supportedWasherWaterTemperature",
+      "washerWaterTemperature"
+    ]
+  },
+  "custom.washerSpinLevel": {
+    "commands": {
+      "setWasherSpinLevel": [
+        {
+          "name": "spinLevel",
+          "type": "string",
+          "enum": [
+            "none",
+            "rinseHold",
+            "noSpin",
+            "low",
+            "extraLow",
+            "delicate",
+            "medium",
+            "high",
+            "extraHigh",
+            "200",
+            "400",
+            "600",
+            "800",
+            "1000",
+            "1200",
+            "1400",
+            "1600"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "washerSpinLevel",
+      "supportedWasherSpinLevel"
+    ]
+  },
+  "custom.washerRinseCycles": {
+    "commands": {
+      "setWasherRinseCycles": [
+        {
+          "name": "cycle",
+          "type": "string",
+          "enum": [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "supportedWasherRinseCycles",
+      "washerRinseCycles"
+    ]
+  },
+  "custom.dryerDryLevel": {
+    "commands": {
+      "setDryerDryLevel": [
+        {
+          "name": "dryLevel",
+          "type": "string",
+          "enum": [
+            "none",
+            "damp",
+            "less",
+            "normal",
+            "more",
+            "very",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "cupboard",
+            "extra",
+            "shirt",
+            "delicate",
+            "30",
+            "60",
+            "90",
+            "120",
+            "150",
+            "180",
+            "210",
+            "240",
+            "270",
+            "drum20",
+            "drum40",
+            "drum60"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "dryerDryLevel",
+      "supportedDryerDryLevel"
+    ]
+  },
+  "custom.washerSoilLevel": {
+    "commands": {
+      "setWasherSoilLevel": [
+        {
+          "name": "soilLevel",
+          "type": "string",
+          "enum": [
+            "none",
+            "heavy",
+            "normal",
+            "light",
+            "extraLight",
+            "extraHeavy",
+            "up",
+            "down"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "supportedWasherSoilLevel",
+      "washerSoilLevel"
+    ]
+  },
+  "custom.jobBeginningStatus": {
+    "commands": {},
+    "attributes": [
+      "jobBeginningStatus"
+    ]
+  },
+  "custom.energyType": {
+    "commands": {
+      "setEnergySavingLevel": [
+        {
+          "name": "energySavingLevel",
+          "type": "integer",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "energyType",
+      "energySavingSupport",
+      "drMaxDuration",
+      "energySavingLevel",
+      "energySavingInfo",
+      "supportedEnergySavingLevels",
+      "energySavingOperation",
+      "notificationTemplateID",
+      "energySavingOperationSupport"
+    ]
+  },
+  "custom.disabledCapabilities": {
+    "commands": {},
+    "attributes": [
+      "disabledCapabilities"
+    ]
+  },
+  "samsungce.washerCycle": {
+    "commands": {
+      "setWasherCycle": [
+        {
+          "name": "washerCycle",
+          "type": "string",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setCycleType": [
+        {
+          "name": "cycleType",
+          "type": "string",
+          "enum": [
+            "allInOne",
+            "washingOnly",
+            "dryingOnly"
+          ],
+          "optional": false
+        },
+        {
+          "name": "washerCycle",
+          "type": "string",
+          "enum": null,
+          "optional": true
+        }
+      ]
+    },
+    "attributes": [
+      "cycleType",
+      "supportedCycles",
+      "availableCycleTypes",
+      "washerCycle",
+      "referenceTable",
+      "specializedFunctionClassification"
+    ]
+  },
+  "samsungce.washerCyclePreset": {
+    "commands": {
+      "setWasherCyclePreset": [
+        {
+          "name": "presets",
+          "type": "object",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "delete": [
+        {
+          "name": "presetIds",
+          "type": "array",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "maxNumberOfPresets",
+      "presets"
+    ]
+  },
+  "samsungce.washerOperatingState": {
+    "commands": {
+      "resume": [],
+      "cancel": [],
+      "start": [],
+      "estimateOperationTime": [],
+      "setDelayEnd": [
+        {
+          "name": "delayTime",
+          "type": "integer",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "pause": []
+    },
+    "attributes": [
+      "washingProgress",
+      "dryingProgress",
+      "washerJobState",
+      "operatingState",
+      "supportedOperatingStates",
+      "scheduledJobs",
+      "scheduledPhases",
+      "progress",
+      "remainingTimeStr",
+      "washerJobPhase",
+      "operationTime",
+      "remainingTime"
+    ]
+  },
+  "samsungce.washerBubbleSoak": {
+    "commands": {
+      "off": [],
+      "on": []
+    },
+    "attributes": [
+      "status"
+    ]
+  },
+  "samsungce.washerDelayEnd": {
+    "commands": {
+      "refreshMinimumReservableTime": [],
+      "setDelayTime": [
+        {
+          "name": "delayTime",
+          "type": "integer",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "remainingTime",
+      "minimumReservableTime"
+    ]
+  },
+  "samsungce.kidsLock": {
+    "commands": {},
+    "attributes": [
+      "lockState"
+    ]
+  },
+  "samsungce.switch": {
+    "commands": {
+      "setSwitch": [
+        {
+          "name": "switch",
+          "type": "string",
+          "enum": [
+            "on",
+            "off"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "supportedSwitches",
+      "availableSwitches",
+      "switch"
+    ]
+  },
+  "samsungce.washerWashingTime": {
+    "commands": {
+      "setWashingTime": [
+        {
+          "name": "washingTime",
+          "type": "string",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "supportedWashingTimes",
+      "washingTime"
+    ]
+  },
+  "samsungce.washerWaterLevel": {
+    "commands": {
+      "setWaterLevel": [
+        {
+          "name": "waterLevel",
+          "type": "string",
+          "enum": [
+            "noDisplay",
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "auto",
+            "low",
+            "medium",
+            "high",
+            "extraHigh"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "supportedWaterLevel",
+      "waterLevel"
+    ]
+  },
+  "samsungce.detergentState": {
+    "commands": {
+      "setDetergentType": [
+        {
+          "name": "detergentType",
+          "type": "string",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setInitialAmount": [
+        {
+          "name": "amount",
+          "type": "number",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setRemainingAmount": [
+        {
+          "name": "amount",
+          "type": "number",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setDosage": [
+        {
+          "name": "amount",
+          "type": "number",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "remainingAmount",
+      "dosage",
+      "initialAmount",
+      "detergentType"
+    ]
+  },
+  "samsungce.softenerState": {
+    "commands": {
+      "setInitialAmount": [
+        {
+          "name": "amount",
+          "type": "number",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setRemainingAmount": [
+        {
+          "name": "amount",
+          "type": "number",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setDosage": [
+        {
+          "name": "amount",
+          "type": "number",
+          "enum": null,
+          "optional": false
+        }
+      ],
+      "setSoftenerType": [
+        {
+          "name": "softenerType",
+          "type": "string",
+          "enum": null,
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "remainingAmount",
+      "dosage",
+      "softenerType",
+      "initialAmount"
+    ]
+  },
+  "samsungce.deviceIdentification": {
+    "commands": {},
+    "attributes": [
+      "micomAssayCode",
+      "modelName",
+      "serialNumber",
+      "serialNumberExtra",
+      "releaseCountry",
+      "modelClassificationCode",
+      "description",
+      "releaseYear",
+      "binaryId"
+    ]
+  },
+  "hca.washerMode": {
+    "commands": {
+      "setMode": [
+        {
+          "name": "mode",
+          "type": "string",
+          "enum": [
+            "normal",
+            "mix",
+            "quickWash",
+            "rinseOnly",
+            "spinOnly",
+            "eco"
+          ],
+          "optional": false
+        }
+      ]
+    },
+    "attributes": [
+      "mode",
+      "supportedModes"
+    ]
+  }
+}

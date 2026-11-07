@@ -1,0 +1,113 @@
+{
+  "_comment": [
+    "Snapshot of the washer taken from the SmartThings Advanced Web App on 2026-11-07.",
+    "Regenerate with `npm run probe`.",
+    "",
+    "deviceId is deliberately null here -- it identifies one person's appliance, so it",
+    "lives in .env as SMARTTHINGS_DEVICE_ID instead of in the repo. `npm run probe`",
+    "lists the devices on your account and prints the id to put there."
+  ],
+  "deviceId": null,
+  "locationId": null,
+  "roomId": null,
+  "label": "Wasmachine",
+  "name": "[washer] Samsung",
+  "presentationId": "DA-WM-WM-000001",
+  "ocfDeviceType": "oic.d.washer",
+  "modelNumber": "DA_WM_TP2_20_COMMON|20260041|20010102011411B502A3020700000000",
+  "firmwareVersion": "DA_WM_TP2_20_COMMON_30250414",
+  "internalDescription": "DA_WM_TP2_20_COMMON_WW6600R/DC92-02617A_7069",
+  "referenceTable": "Table_02",
+  "specializedFunctionClassification": 4,
+  "executionContext": "CLOUD",
+
+  "allowedScopes": [
+    "w:devices",
+    "w:devices:locationId",
+    "w:devices:roomId",
+    "d:devices",
+    "x:devices",
+    "r:devices:visible"
+  ],
+
+  "dialOrder": [
+    "1C", "1B", "1E", "1D", "1F", "25", "26", "33", "24", "32", "20", "22",
+    "23", "2F", "21", "2D", "30", "27", "28", "36", "38", "39", "37", "29"
+  ],
+
+  "globalOptionLists": {
+    "_comment": "Device-wide supported* lists. Per-cycle lists in supported-cycles.json are narrower and are the ones to honour.",
+    "custom.washerWaterTemperature.supportedWasherWaterTemperature": ["none", "cold", "20", "30", "40", "60", "90"],
+    "custom.washerSpinLevel.supportedWasherSpinLevel": ["rinseHold", "noSpin", "400", "800", "1000", "1200", "1400"],
+    "custom.washerRinseCycles.supportedWasherRinseCycles": ["0", "1", "2", "3", "4", "5"],
+    "custom.dryerDryLevel.supportedDryerDryLevel": ["none", "cupboard", "30", "60", "90", "120", "180", "240"],
+    "samsungce.washerCycle.availableCycleTypes": ["allInOne", "washingOnly", "dryingOnly"],
+    "washerOperatingState.supportedMachineStates": ["stop", "run", "pause"],
+    "samsungce.washerOperatingState.supportedOperatingStates": ["ready", "running", "paused"],
+    "samsungce.switch.supportedSwitches": ["on", "off"],
+    "hca.washerMode.supportedModes": ["normal", "quickWash", "mix", "eco", "spinOnly"]
+  },
+
+  "disabledCapabilities": [
+    "samsungce.autoDispenseDetergent",
+    "samsungce.autoDispenseSoftener",
+    "samsungce.waterConsumptionReport",
+    "samsungce.washerCyclePreset",
+    "samsungce.welcomeMessage",
+    "samsungce.dongleSoftwareInstallation",
+    "sec.wifiConfiguration",
+    "samsungce.quickControl",
+    "samsungce.energyPlanner",
+    "samsungce.audioVolumeLevel",
+    "demandResponseLoadControl",
+    "samsungce.washerFreezePrevent",
+    "custom.washerSoilLevel",
+    "samsungce.washerWaterLevel",
+    "samsungce.washerWaterValve",
+    "samsungce.washerWashingTime",
+    "custom.washerAutoDetergent",
+    "custom.washerAutoSoftener"
+  ],
+
+  "commandSchema": {
+    "_comment": [
+      "SUPERSEDED by data/capability-commands.json, which is fetched from the",
+      "SmartThings capability definitions by scripts/capabilities.mjs and is the",
+      "authority. src/commands.mjs validates every command against it at import",
+      "time, so a wrong name throws instead of failing against the machine.",
+      "",
+      "Three names that were guessed wrong and are now corrected:",
+      "  setWasherCycleType -> setCycleType(cycleType, washerCycle?)",
+      "  bubbleSoak setStatus(v) -> separate on() / off(), no arguments",
+      "  washerOperatingState stop() -> cancel()  (resume() also exists)"
+    ],
+    "openQuestion": "setWasherCycle's argument is typed as a bare string, so the schema does not say whether it wants \"Table_02_Course_25\" or \"25\". custom.supportedOptions.setCourse(\"25\") is the fallback. Needs a live test on an idle machine."
+  },
+
+  "observedAt2026_11_07": {
+    "_comment": "Live values when the snapshot was taken; the machine was mid-cycle.",
+    "remoteControlEnabled": "true",
+    "switch": "on",
+    "machineState": "run",
+    "operatingState": "running",
+    "washerJobState": "wash",
+    "washerCycle": "Table_02_Course_25",
+    "course": "25",
+    "cycleType": "washingOnly",
+    "washerWaterTemperature": "30",
+    "washerSpinLevel": "1000",
+    "washerRinseCycles": "2",
+    "dryerDryLevel": "none",
+    "bubbleSoak": "off",
+    "operationTime": 145,
+    "remainingTime": 125,
+    "progress": 14,
+    "scheduledPhases": [
+      { "phaseName": "wash", "timeInMin": 100 },
+      { "phaseName": "rinse", "timeInMin": 29 },
+      { "phaseName": "spin", "timeInMin": 15 }
+    ],
+    "maxNumberOfPresets": 10,
+    "presets": null
+  }
+}

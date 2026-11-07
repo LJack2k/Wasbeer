@@ -1,0 +1,9 @@
+node_modules/
+.env
+
+# raw API dumps: contain serial numbers, device and location ids
+probe-output/
+!probe-output/.gitkeep
+
+# your own saved programmes; favourites.example.json is the seed
+data/favourites.json

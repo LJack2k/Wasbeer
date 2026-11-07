@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "The API only ever gives cycle CODES (1C, 25, 2F...). The human names live in a",
+    "reference table (Table_02) that Samsung resolves inside their own app, and which",
+    "the cloud API does not expose. So this mapping has to be filled in by hand, once.",
+    "",
+    "The order below is device.json's dialOrder, which is the order SmartThings itself",
+    "lists the courses in -- so it should line up 1:1 with the cycle list in the",
+    "SmartThings app and on the machine's own dial/menu.",
+    "",
+    "'guess' is inferred from each cycle's constraints and is NOT authoritative.",
+    "Replace 'name' with the real label; set 'confirmed' to true once verified."
+  ],
+  "locale": "nl-NL",
+  "cycles": [
+    { "code": "1C", "name": null, "confirmed": false, "guess": "Auto/AI Wash",        "why": "no temperature selectable at all, drying available, 1400 spin" },
+    { "code": "1B", "name": null, "confirmed": false, "guess": "Katoen",              "why": "full cold-90 range, default 30, soak, drying -- classic cotton" },
+    { "code": "1E", "name": null, "confirmed": false, "guess": "Fijne was",           "why": "cold default, max 40, spin capped at 1200, 3 rinses" },
+    { "code": "1D", "name": null, "confirmed": false, "guess": "Synthetica",          "why": "40 default, max 40, 1400 spin, soak, drying" },
+    { "code": "1F", "name": null, "confirmed": false, "guess": "Outdoor/Sport",       "why": "cold ONLY, 1200 spin, drying available" },
+    { "code": "25", "name": null, "confirmed": false, "guess": "Eco 40-60",           "why": "currently running, 145 min, 30 default, cold-60, 3 rinses" },
+    { "code": "26", "name": null, "confirmed": false, "guess": "Wol",                 "why": "spin capped at 400 -- only wool does that" },
+    { "code": "33", "name": null, "confirmed": false, "guess": "Hygiene Stoom",       "why": "wash-only, 60 default, up to 90, 3 rinses, 1400" },
+    { "code": "24", "name": null, "confirmed": false, "guess": "Fijne was (kort)",    "why": "wash-only, max 40, spin max 800, 3 rinses" },
+    { "code": "32", "name": null, "confirmed": false, "guess": null,                  "why": "wash-only, 30 default up to 60, spin default 800 but allows 1400" },
+    { "code": "20", "name": null, "confirmed": false, "guess": "Beddengoed",          "why": "60 default up to 90, FOUR rinses, 1400 spin, drying" },
+    { "code": "22", "name": null, "confirmed": false, "guess": null,                  "why": "wash-only, 40 default max 40, spin max 800, no soak" },
+    { "code": "23", "name": null, "confirmed": false, "guess": null,                  "why": "allInOne, 30 default max 40, 1200 spin, 3 rinses, no soak" },
+    { "code": "2F", "name": null, "confirmed": false, "guess": null,                  "why": "wash-only, 30 default max 40, spin max 800, 3 rinses, soak" },
+    { "code": "21", "name": null, "confirmed": false, "guess": "Baby/Allergie",       "why": "wash-only, FOUR rinses by default, 1200 spin" },
+    { "code": "2D", "name": null, "confirmed": false, "guess": null,                  "why": "wash-only, 40 default max 40, spin max 800, 2 rinses, soak" },
+    { "code": "30", "name": null, "confirmed": false, "guess": null,                  "why": "wash-only, 40 default up to 60, 1400 spin, soak" },
+    { "code": "27", "name": null, "confirmed": false, "guess": "Spoelen + Centrifugeren", "why": "no temperature, 1 rinse by default, full spin range" },
+    { "code": "28", "name": null, "confirmed": false, "guess": "Centrifugeren",       "why": "no temperature, rinses fixed at 0, spin is the only control" },
+    { "code": "36", "name": null, "confirmed": false, "guess": "Wassen & Drogen",     "why": "drying is MANDATORY (no 'none'), spin locked to 1400" },
+    { "code": "38", "name": null, "confirmed": false, "guess": "Drogen Katoen",       "why": "drying-only, cupboard/30/60/90" },
+    { "code": "39", "name": null, "confirmed": false, "guess": "Drogen Synthetica",   "why": "drying-only, identical options to 38" },
+    { "code": "37", "name": null, "confirmed": false, "guess": "Luchten",             "why": "drying-only with drying level fixed at 'none' -- unheated air" },
+    { "code": "29", "name": null, "confirmed": false, "guess": "Eco Trommel Reinigen", "why": "70C fixed, 1200 fixed, 2 rinses fixed, nothing adjustable" }
+  ]
+}

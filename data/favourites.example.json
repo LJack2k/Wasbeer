@@ -1,0 +1,53 @@
+[
+  {
+    "id": "handdoeken",
+    "label": "Handdoeken",
+    "note": "Hot cotton wash, full spin",
+    "cycle": "1B",
+    "cycleType": "washingOnly",
+    "waterTemperature": "60",
+    "spinLevel": "1400",
+    "rinseCycle": "3",
+    "dryingLevel": "none",
+    "bubbleSoak": "off"
+  },
+  {
+    "id": "wol",
+    "label": "Wol",
+    "note": "Spin is capped at 400 by the machine for this cycle",
+    "cycle": "26",
+    "cycleType": "washingOnly",
+    "waterTemperature": "30",
+    "spinLevel": "400",
+    "rinseCycle": "2",
+    "dryingLevel": "none",
+    "bubbleSoak": "off"
+  },
+  {
+    "id": "beddengoed",
+    "label": "Beddengoed",
+    "note": "Extra rinses, wash and dry in one go",
+    "cycle": "20",
+    "cycleType": "allInOne",
+    "waterTemperature": "60",
+    "spinLevel": "1400",
+    "rinseCycle": "4",
+    "dryingLevel": "cupboard",
+    "bubbleSoak": "on"
+  },
+  {
+    "id": "centrifugeren",
+    "label": "Alleen centrifugeren",
+    "note": "No temperature, no rinses -- spin is the only control",
+    "cycle": "28",
+    "cycleType": "washingOnly",
+    "spinLevel": "1200"
+  },
+  {
+    "id": "trommel-reinigen",
+    "label": "Trommel reinigen",
+    "note": "Everything is fixed by the machine; nothing should be sent but the cycle",
+    "cycle": "29",
+    "cycleType": "washingOnly"
+  }
+]
