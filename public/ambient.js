@@ -86,11 +86,11 @@ function tempKey(t) {
  * scheduled phase durations and reads off the position within the active one.
  * It is what lets the rinse clean itself up as it goes.
  */
-function phaseProgressOf(s) {
+function phaseProgressOf(s, prog) {
   const list = s?.phases ?? [];
   if (!s?.running || !list.length) return 0;
   const total = list.reduce((n, p) => n + (p.timeInMin || 0), 0) || 1;
-  const elapsed = total * clamp((s.progress ?? 0) / 100, 0, 1);
+  const elapsed = total * clamp((prog ?? s.progress ?? 0) / 100, 0, 1);
   let start = 0;
   for (const p of list) {
     const dur = p.timeInMin || 1;
@@ -100,7 +100,7 @@ function phaseProgressOf(s) {
   return 0;
 }
 
-function phaseShape(s) {
+function phaseShape(s, prog) {
   const base = {
     energy: 0.1, level: 0.12, lift: 1, turbulence: 0.05, slosh: 0,
     foam: 0, streaks: 0, shimmer: 0, lint: 0, fill: 0, condensation: 0.12,
@@ -124,7 +124,7 @@ function phaseShape(s) {
         foam: 0.25, fill: 1, condensation: 0.45, label: 'filling' };
     case 'wash': {
       // suds build over the first few minutes rather than existing instantly
-      const p = phaseProgressOf(s);
+      const p = phaseProgressOf(s, prog);
       const lather = Math.min(1, p / 0.18);
       return { ...base, energy: 0.95, level: 0.78, turbulence: 1, slosh: 1,
         foam: (soak ? 1 : 0.75) * (0.35 + 0.65 * lather),
@@ -135,7 +135,7 @@ function phaseShape(s) {
       // The rinse is the wash running backwards: the soap leaves. Foam decays,
       // the water thins out, the bubbles get smaller and drift sideways as
       // clean water is exchanged rather than churned.
-      const p = phaseProgressOf(s);
+      const p = phaseProgressOf(s, prog);
       const clean = Math.pow(p, 0.8);
 
       // one drain-and-refill per selected rinse cycle
@@ -242,6 +242,9 @@ export function createAmbient(canvas) {
   let density = 1;
 
   let target = phaseShape(null);
+  // continuously interpolated progress, fed by the live countdown; falls back
+  // to the API's whole-percent value when null
+  let progressLive = null;
   const cur = { ...target };
   let tintTarget = tempKey(null), tintPrev = 'warm', tintMix = 1;
 
@@ -640,7 +643,7 @@ export function createAmbient(canvas) {
     drumAngle += dt * (spinning ? 11 : dir * 1.9 * cur.energy);
 
     // --- progress ring ---
-    const pct = clamp((status?.progress ?? 0) / 100, 0, 1) * (status?.running ? 1 : 0);
+    const pct = clamp((progressLive ?? status?.progress ?? 0) / 100, 0, 1) * (status?.running ? 1 : 0);
     k.lineWidth = S * 0.035;
     k.lineCap = 'round';
     k.strokeStyle = 'rgba(255,255,255,0.09)';
@@ -755,6 +758,13 @@ export function createAmbient(canvas) {
 
   function draw(dt, time) {
     const T = THEMES[theme];
+
+    // Recompute the dials every frame rather than only on each poll. The API
+    // reports progress in whole percent, and the rinse is ~20% of the cycle, so
+    // one step moved it 5% at a stride -- the drain dips arrived as jumps. With
+    // an interpolated progress (setProgress, driven by the live clock) this
+    // turns them back into continuous motion.
+    target = phaseShape(status, progressLive);
 
     // Frame-rate independent easing. `dt * rate` as a lerp factor converges at a
     // speed that depends on the frame rate, which left the water half-drained
@@ -979,6 +989,8 @@ export function createAmbient(canvas) {
     },
     /** 'fill' | 'drain' | 'done' -- a one-off moment, not a state change. */
     pulse(kind) { pulseKind = kind; pulseT = 1; },
+    /** Smooth progress 0..100 from the live clock, or null to use the poll. */
+    setProgress(p) { progressLive = (p == null ? null : clamp(Number(p), 0, 100)); },
     /** Bubble multiplier, 0.25x .. 12x. Past ~4x this is a joke setting. */
     setDensity(d) {
       density = clamp(Number(d) || 1, 0.25, 30);
@@ -995,6 +1007,7 @@ export function createAmbient(canvas) {
     /** Jump straight to the target state instead of easing -- the debug bar
      *  wants the phase it just selected, not a three-second fade into it. */
     snap() {
+      target = phaseShape(status, progressLive);
       for (const key of Object.keys(cur)) if (typeof target[key] === 'number') cur[key] = target[key];
       tintMix = 1; tintPrev = tintTarget;
       if (reduce) draw(0.016, 0);
@@ -1004,6 +1017,7 @@ export function createAmbient(canvas) {
       phase: phaseShape(status).label,
       level: Math.round(cur.level * 100) / 100,
       density,
+      progress: progressLive === null ? null : Math.round(progressLive * 1000) / 1000,
       clarity: Math.round(cur.clarity * 100) / 100,
       foam: Math.round(cur.foam * 100) / 100,
       fps: Math.round(1000 / Math.max(frameCost, 1)),

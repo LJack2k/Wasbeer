@@ -266,10 +266,28 @@ function renderTimeline(s) {
       ]),
     ]);
     seg.style.flexGrow = String(dur);
+    seg.dataset.start = String(start - dur);
+    seg.dataset.dur = String(dur);
     seg.querySelector('.tseg-fill').style.width = `${(fill * 100).toFixed(1)}%`;
     bar.append(seg);
   }
   wrap.append(bar);
+}
+
+/**
+ * Move the fills from the ticking clock rather than rebuilding the bar, so the
+ * timeline creeps along with the countdown instead of stepping once per poll.
+ */
+function updateTimelineFills(s, pct) {
+  const segs = $('#phases').querySelectorAll('.tseg');
+  if (!segs.length) return;
+  const total = (s.phases ?? []).reduce((n, p) => n + (p.timeInMin || 0), 0) || 1;
+  const elapsed = total * clamp(pct / 100, 0, 1);
+  for (const seg of segs) {
+    const start = Number(seg.dataset.start), dur = Number(seg.dataset.dur) || 1;
+    const fill = clamp((elapsed - start) / dur, 0, 1);
+    seg.querySelector('.tseg-fill').style.width = `${(fill * 100).toFixed(1)}%`;
+  }
 }
 
 /* ---------------- live countdown, tab title, favicon ---------------- */
@@ -277,6 +295,7 @@ function renderTimeline(s) {
 let lastPhase = null;
 let endsAt = null;
 let ticker = null;
+let livePct = null;      // progress interpolated from the clock, 0..100
 
 /**
  * Anchor an absolute end time from the poll, then count down locally. The API
@@ -323,18 +342,31 @@ function paintClock() {
   const accent = getComputedStyle(document.documentElement).getPropertyValue('--run').trim() || '#4fb8e8';
 
   if (!s) {
+    livePct = null; ambient?.setProgress(null);
     rem.textContent = ''; eta.textContent = '';
     document.title = 'Wasbeer — geen verbinding';
     paintFavicon(0, '#e2695f');
     return;
   }
   if (!s.running || endsAt === null) {
+    livePct = null; ambient?.setProgress(null);
     rem.textContent = ''; eta.textContent = '';
     document.title = s.operatingState === 'paused' ? 'Gepauzeerd · Wasbeer' : 'Klaar · Wasbeer';
     paintFavicon(0, s.operatingState === 'paused' ? '#e0a23c' : '#3fc3b0');
     return;
   }
   const left = endsAt - Date.now();
+
+  // Interpolate progress from the live clock. The API reports whole percent,
+  // which is far too coarse for anything that reacts within a phase -- the
+  // rinse drains arrived as jumps rather than drains.
+  const op = s.operationTime || (s.phases ?? []).reduce((n, p) => n + (p.timeInMin || 0), 0);
+  if (op > 0) {
+    livePct = clamp(((op - left / 60000) / op) * 100, 0, 100);
+    ambient?.setProgress(livePct);
+    updateTimelineFills(s, livePct);
+  }
+
   const text = countdown(left);
   rem.textContent = text;
   eta.textContent = `klaar om ${new Date(endsAt).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })}`;
@@ -659,6 +691,11 @@ function applyFake() {
     const before = SCHEDULE.slice(0, idx).reduce((n, p) => n + p.timeInMin, 0);
     overall = ((before + SCHEDULE[idx].timeInMin * (fake.progress / 100)) / total) * 100;
   }
+
+  // The clock only re-anchors when a reading disagrees by more than 90s, which
+  // is right for real polls and wrong for the slider -- drop the anchor so a
+  // simulated jump takes effect immediately.
+  endsAt = null;
 
   // "Net klaar" only fires the celebration if we were running a moment ago.
   if (fake.phase === 'done') wasRunning = true;

@@ -188,8 +188,28 @@ cycle** — `custom.washerRinseCycles` says 3, so you get three dips at roughly
 Side effect worth noting: culling the big bubbles as it clears means the end of
 a rinse is *cheaper* to render than the start, about 10 ms versus 17 ms at 15×.
 
+#### Progress has to be interpolated for any of this to work
+
+The API reports progress as a **whole percent**, polled every 20 seconds. The
+rinse is only ~20% of the cycle, so one step moves it 5% at a stride — and a
+drain window three minutes wide was being crossed in about two samples. The
+drains arrived as jumps.
+
+So progress is now derived from the live countdown instead, the same anchored
+clock that drives the display:
+
+```
+86.217 → 86.228 → 86.240 → 86.252 → 86.263    (the API, meanwhile: 87)
+```
+
+About 0.011% per second, roughly ninety times the resolution of the polled
+value. The phase dials are recomputed every frame from it rather than only on
+each poll, which turns the drains back into drains.
+
 The debug bar's **Voortgang** slider is scoped to the selected phase, so
-dragging it across the rinse shows the whole arc in a few seconds.
+dragging it across the rinse shows the whole arc in a few seconds. It also
+clears the clock anchor, since the 90-second hysteresis that keeps real polls
+from jittering would otherwise swallow a simulated jump.
 
 ### Making canvas 2D fast enough for this
 
