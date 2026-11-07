@@ -154,13 +154,42 @@ Each phase has its own weather:
 |---|---|
 | Vullen | Inflow jet with churn where it lands, water rising |
 | Wassen | Fully submerged, dense bubbles, foam at the surface, the water mass sloshing |
-| Spoelen | Calmer, clearer, less foam |
+| Spoelen | Clears itself out as it runs — see below |
 | Centrifuge | Water drains hard, bubbles reverse, speed streaks in the periphery |
 | Drogen | No water at all — warm updraft, convection columns, tumbling lint |
 | Pauze | Everything settles, condensation stays on the glass |
 
 **Slosh** is the signature: `tanh(sin(t))` flattens a sine into hold–reverse–hold,
 so the whole water mass swings one way, reverses, swings back, like a real drum.
+
+### The rinse runs the wash backwards
+
+Rinse and wash used to look nearly identical, which was wrong — a rinse is the
+soap *leaving*. It now evolves across its own duration rather than sitting at
+fixed values.
+
+The API only reports overall progress, so `phaseProgressOf()` distributes that
+across the scheduled phase durations and reads off the position within the
+active one. That number drives a `clarity` dial, 0 (soapy) to 1 (clean):
+
+- **foam** decays as `(1 − clean)^1.8` — 0.50 at the start, effectively zero by
+  the end
+- **the water thins**, dropping its fill alpha by 45% as it clears
+- **bubbles shrink and fade**, and the *large* ones stop existing first, because
+  without surfactant there is nothing to hold a big bubble together
+- **caustics sharpen**, since clear water carries light better than suds
+- **drift goes sideways** via a `lateral` dial: rinse water is exchanged rather
+  than churned, so bubbles track across instead of straight up
+
+On top of that the water level **drains and refills once per selected rinse
+cycle** — `custom.washerRinseCycles` says 3, so you get three dips at roughly
+30%, 60% and 90% through the phase.
+
+Side effect worth noting: culling the big bubbles as it clears means the end of
+a rinse is *cheaper* to render than the start, about 10 ms versus 17 ms at 15×.
+
+The debug bar's **Voortgang** slider is scoped to the selected phase, so
+dragging it across the rinse shows the whole arc in a few seconds.
 
 ### Making canvas 2D fast enough for this
 

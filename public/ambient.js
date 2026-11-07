@@ -79,10 +79,34 @@ function tempKey(t) {
  * Every phase as a set of dials. Nothing switches on or off abruptly -- the
  * renderer eases toward these, so transitions glide.
  */
+/**
+ * How far through the CURRENT phase we are, 0..1.
+ *
+ * The API only reports overall progress, so this distributes it across the
+ * scheduled phase durations and reads off the position within the active one.
+ * It is what lets the rinse clean itself up as it goes.
+ */
+function phaseProgressOf(s) {
+  const list = s?.phases ?? [];
+  if (!s?.running || !list.length) return 0;
+  const total = list.reduce((n, p) => n + (p.timeInMin || 0), 0) || 1;
+  const elapsed = total * clamp((s.progress ?? 0) / 100, 0, 1);
+  let start = 0;
+  for (const p of list) {
+    const dur = p.timeInMin || 1;
+    if (p.phaseName === s.jobPhase) return clamp((elapsed - start) / dur, 0, 1);
+    start += dur;
+  }
+  return 0;
+}
+
 function phaseShape(s) {
   const base = {
     energy: 0.1, level: 0.12, lift: 1, turbulence: 0.05, slosh: 0,
     foam: 0, streaks: 0, shimmer: 0, lint: 0, fill: 0, condensation: 0.12,
+    // clarity 0 = soapy and milky, 1 = clean water: fewer, smaller bubbles,
+    // thinner water, sharper caustics. lateral = sideways drift.
+    clarity: 0, lateral: 0,
     label: 'idle',
   };
   if (!s) return { ...base, condensation: 0, label: 'offline' };
@@ -98,12 +122,37 @@ function phaseShape(s) {
     case 'weightSensing':
       return { ...base, energy: 0.5, level: 0.3, turbulence: 0.55, slosh: 0.2,
         foam: 0.25, fill: 1, condensation: 0.45, label: 'filling' };
-    case 'wash':
+    case 'wash': {
+      // suds build over the first few minutes rather than existing instantly
+      const p = phaseProgressOf(s);
+      const lather = Math.min(1, p / 0.18);
       return { ...base, energy: 0.95, level: 0.78, turbulence: 1, slosh: 1,
-        foam: soak ? 1 : 0.75, condensation: 0.95, label: 'wash' };
-    case 'rinse':
-      return { ...base, energy: 0.65, level: 0.7, turbulence: 0.6, slosh: 0.7,
-        foam: 0.22, condensation: 0.85, label: 'rinse' };
+        foam: (soak ? 1 : 0.75) * (0.35 + 0.65 * lather),
+        clarity: 0, lateral: 0.25,
+        condensation: 0.95, label: 'wash' };
+    }
+    case 'rinse': {
+      // The rinse is the wash running backwards: the soap leaves. Foam decays,
+      // the water thins out, the bubbles get smaller and drift sideways as
+      // clean water is exchanged rather than churned.
+      const p = phaseProgressOf(s);
+      const clean = Math.pow(p, 0.8);
+
+      // one drain-and-refill per selected rinse cycle
+      const cycles = clamp(Number(s.rinseCycle) || 2, 1, 4);
+      const within = (p * cycles) % 1;
+      const dip = within > 0.68 ? Math.sin(((within - 0.68) / 0.32) * Math.PI) : 0;
+
+      return { ...base,
+        energy: 0.62 - clean * 0.18,
+        level: 0.72 - dip * 0.52,
+        turbulence: 0.55 - clean * 0.2 + dip * 0.3,
+        slosh: 0.7,
+        foam: 0.5 * Math.pow(1 - clean, 1.8),
+        clarity: clean,
+        lateral: 0.5 + clean * 0.7,
+        condensation: 0.85, label: 'rinse' };
+    }
     case 'spin':
       return { ...base, energy: 1, level: 0.07, lift: -1, turbulence: 0.35, slosh: 0.12,
         streaks: 1, foam: 0.1, condensation: 0.6, label: 'spin' };
@@ -362,10 +411,12 @@ export function createAmbient(canvas) {
     ctx.lineTo(W + 40, H + 40);
     ctx.closePath();
 
+    // clean water is thinner: the rinse visibly clears as the soap leaves
+    const thin = 1 - cur.clarity * 0.45;
     const grad = ctx.createLinearGradient(0, waterTop, 0, H);
-    grad.addColorStop(0, `rgba(${r},${g},${b},0.42)`);
-    grad.addColorStop(0.35, `rgba(${r},${g},${b},0.3)`);
-    grad.addColorStop(1, `rgba(${r},${g},${b},0.14)`);
+    grad.addColorStop(0, `rgba(${r},${g},${b},${(0.42 * thin).toFixed(3)})`);
+    grad.addColorStop(0.35, `rgba(${r},${g},${b},${(0.3 * thin).toFixed(3)})`);
+    grad.addColorStop(1, `rgba(${r},${g},${b},${(0.14 * thin).toFixed(3)})`);
     ctx.fillStyle = grad;
     ctx.fill();
 
@@ -393,10 +444,12 @@ export function createAmbient(canvas) {
     for (const p of bubbles) {
       const { fx, fy } = turb > 0.02 ? flowAt(p.x, p.y, time) : { fx: 0, fy: 0 };
 
-      // buoyancy, agitation, and a little inertia
+      // buoyancy, agitation, and a little inertia. `lateral` pushes bubbles
+      // sideways rather than up -- rinse water is exchanged, not churned.
       const buoy = p.rise * (0.25 + cur.energy * 1.25) * cur.lift;
-      p.vx = lerp(p.vx, fx * 52 * turb + Math.sin(time * p.wob + p.ph) * 16 * turb, dt * 3);
-      p.vy = lerp(p.vy, -buoy + fy * 40 * turb, dt * 3);
+      const drift = Math.sin(time * 0.33 + p.ph * 0.2) * 34 * cur.lateral;
+      p.vx = lerp(p.vx, fx * 52 * turb + Math.sin(time * p.wob + p.ph) * 16 * turb + drift, dt * 3);
+      p.vy = lerp(p.vy, -buoy * (1 - cur.clarity * 0.35) + fy * 40 * turb, dt * 3);
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
@@ -410,9 +463,15 @@ export function createAmbient(canvas) {
       const a = p.a * depth * (0.3 + cur.energy * 0.8);
       if (a < 0.02) continue;
 
+      // without surfactant the bubbles are fewer, smaller and fainter: as the
+      // rinse clears, the big ones stop existing first
+      const shrink = 1 - cur.clarity * 0.55 * (p.bucket / (SPRITE_BUCKETS - 1));
+      const fade = 1 - cur.clarity * 0.6;
+      if (cur.clarity > 0.15 && p.bucket > 2 && (p.ph % 1) < cur.clarity * 0.7) continue;
+
       const sp = sprites[p.bucket];
-      const size = sp.pad * 2 * p.scale;
-      ctx.globalAlpha = Math.min(1, a);
+      const size = sp.pad * 2 * p.scale * shrink;
+      ctx.globalAlpha = Math.min(1, a * fade);
       ctx.drawImage(sp.canvas, p.x + slosh * 0.35 - size / 2, p.y - size / 2, size, size);
     }
     ctx.restore();
@@ -702,7 +761,7 @@ export function createAmbient(canvas) {
     // seconds into the dry phase on a throttled tab. 1 - e^(-dt*rate) does not.
     const k = 1 - Math.exp(-dt * 1.9);
     for (const key of ['energy', 'level', 'lift', 'turbulence', 'slosh', 'foam',
-      'streaks', 'shimmer', 'lint', 'fill', 'condensation']) {
+      'streaks', 'shimmer', 'lint', 'fill', 'condensation', 'clarity', 'lateral']) {
       const v = lerp(cur[key], target[key], k);
       // settle fully instead of asymptotically hovering above a threshold
       cur[key] = Math.abs(v - target[key]) < 0.004 ? target[key] : v;
@@ -790,7 +849,8 @@ export function createAmbient(canvas) {
 
     if (cur.level > 0.04) {
       drawWaterBody(time, waterTop, slosh);
-      if (tier === 2) drawCaustics(time, waterTop, 0.1 + cur.energy * 0.22);
+      // clear water carries light better, so the caustics sharpen as it rinses
+      if (tier === 2) drawCaustics(time, waterTop, (0.1 + cur.energy * 0.22) * (1 + cur.clarity * 0.8));
     }
 
     drawFillJet(time, waterTop, slosh);
@@ -944,6 +1004,8 @@ export function createAmbient(canvas) {
       phase: phaseShape(status).label,
       level: Math.round(cur.level * 100) / 100,
       density,
+      clarity: Math.round(cur.clarity * 100) / 100,
+      foam: Math.round(cur.foam * 100) / 100,
       fps: Math.round(1000 / Math.max(frameCost, 1)),
       targetLevel: target.level,
     }),

@@ -643,7 +643,22 @@ function applyFake() {
   }
 
   const entry = DEBUG_PHASES.find((p) => p.id === fake.phase);
-  const total = 145;
+  const SCHEDULE = [
+    { phaseName: 'wash', timeInMin: 100 },
+    { phaseName: 'rinse', timeInMin: 29 },
+    { phaseName: 'spin', timeInMin: 15 },
+  ];
+  const total = SCHEDULE.reduce((n, p) => n + p.timeInMin, 0);
+
+  // The slider means "through THIS phase", which is what you want when you are
+  // checking how the rinse clears. Convert it to the overall progress the
+  // renderer expects.
+  let overall = fake.progress;
+  const idx = SCHEDULE.findIndex((p) => p.phaseName === fake.phase);
+  if (idx >= 0) {
+    const before = SCHEDULE.slice(0, idx).reduce((n, p) => n + p.timeInMin, 0);
+    overall = ((before + SCHEDULE[idx].timeInMin * (fake.progress / 100)) / total) * 100;
+  }
 
   // "Net klaar" only fires the celebration if we were running a moment ago.
   if (fake.phase === 'done') wasRunning = true;
@@ -656,19 +671,15 @@ function applyFake() {
     cycleType: 'washingOnly',
     jobPhase: entry.patch?.jobPhase !== undefined ? entry.patch.jobPhase : fake.phase,
     jobState: fake.phase,
-    progress: fake.progress,
-    remainingTime: Math.round(total * (1 - fake.progress / 100)),
+    progress: overall,
+    remainingTime: Math.round(total * (1 - overall / 100)),
     operationTime: total,
     waterTemperature: fake.temp,
     spinLevel: '1200',
     rinseCycle: '3',
     dryingLevel: fake.phase === 'dry' ? 'cupboard' : 'none',
     bubbleSoak: 'off',
-    phases: [
-      { phaseName: 'wash', timeInMin: 100 },
-      { phaseName: 'rinse', timeInMin: 29 },
-      { phaseName: 'spin', timeInMin: 15 },
-    ],
+    phases: SCHEDULE,
     ...entry.patch,
   };
   renderStatus();
