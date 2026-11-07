@@ -146,17 +146,52 @@ anything surprising:
 ### The whole page is the status display
 
 `public/ambient.js` paints a full-page canvas behind everything, driven by what
-the machine is doing. The page fills with water during the wash, drains during
-the spin, and the colour follows the wash temperature. Cards float over it as
-frosted glass.
+the machine is doing. Cards float over it as frosted glass.
 
-Motion rules, deliberately conservative — this sits on a second monitor all day:
+Each phase has its own weather:
 
-- nothing rotates, nothing parallaxes, nothing moves faster than ~40 px/s
-- the spin phase gets **more of the same motion**, never different motion
-- capped at 30 fps, and fully paused via `visibilitychange` when the tab is hidden
+| Phase | What the page does |
+|---|---|
+| Vullen | Inflow jet with churn where it lands, water rising |
+| Wassen | Fully submerged, dense bubbles, foam at the surface, the water mass sloshing |
+| Spoelen | Calmer, clearer, less foam |
+| Centrifuge | Water drains hard, bubbles reverse, speed streaks in the periphery |
+| Drogen | No water at all — warm updraft, convection columns, tumbling lint |
+| Pauze | Everything settles, condensation stays on the glass |
+
+**Slosh** is the signature: `tanh(sin(t))` flattens a sine into hold–reverse–hold,
+so the whole water mass swings one way, reverses, swings back, like a real drum.
+
+### Making canvas 2D fast enough for this
+
+Four techniques carry it, and together they land at **2–6 ms/frame with 260
+bubbles** — about a third of the 16.7 ms budget for 60fps:
+
+- **Bubbles are sprites.** Each size bucket is rendered once into its own canvas
+  — body shell, refraction rim, specular highlight — then blitted. 260 bubbles
+  cost 260 `drawImage` calls instead of 260 gradient constructions per frame.
+- **Caustics are computed at 160×90** and upscaled with `screen` compositing.
+  Per-pixel maths is only affordable at low resolution; the upscale blur is what
+  makes it look like light through water.
+- **Agitation is an analytic flow field** — two sine pairs sampled per bubble —
+  so bubbles travel through eddies instead of rising in straight lines.
+- **Refraction and heat shimmer are row-slice self-blits**: the frame is copied
+  to a scratch canvas and drawn back in horizontal strips at varying offsets.
+
+It measures its own frame cost and sheds detail automatically if it can't hold
+60fps (particle count, then caustics and shimmer, then device pixel ratio). The
+debug bar shows the current tier and lets you pin it.
+
+Motion policy — this sits on a second monitor all day:
+
+- **the no-vortex rule is specifically about the spin phase.** Nothing rotates
+  under your gaze; RPM is expressed as horizontal streaks that fade out before
+  reaching the middle of the screen, where the text is.
+- fully paused via `visibilitychange` when the tab is hidden
 - `prefers-reduced-motion` renders one static frame and stops the loop
-- phase changes ease over ~2 s rather than snapping
+- phase changes ease exponentially (`1 - e^(-dt·k)`, so frame-rate independent)
+  over about two seconds; the debug bar snaps instead, since you want to see the
+  phase you just clicked
 
 ### Themes
 

@@ -584,6 +584,7 @@ function applyFake() {
     ...entry.patch,
   };
   renderStatus();
+  ambient?.snap();      // show the selected phase at once, don't ease into it
   drawDebug();
 }
 
@@ -639,12 +640,31 @@ function buildDebugBar() {
     },
   });
 
+  const qualityBtns = [['Hoog', 2], ['Midden', 1], ['Laag', 0]].map(([label, t]) => el('button', {
+    type: 'button', textContent: label, 'data-quality': String(t),
+    onclick: () => { ambient?.setQuality(t); drawDebug(); },
+  }));
+
+  const stats = el('span', { className: 'debug-stats', textContent: '—' });
+
   const body = el('div', { className: 'debug-body' }, [
     row('Fase', phaseBtns),
     row('Temp', tempBtns),
     row('Thema', themeBtns),
     row('Voortgang', [slider, el('span', { className: 'debug-val', textContent: `${fake.progress}%` })]),
+    row('Grafisch', [...qualityBtns, stats]),
   ]);
+
+  // live cost readout, so "GPU mode" is not a guess
+  setInterval(() => {
+    if (!debugEl?.classList.contains('open')) return;
+    const s = ambient?.stats();
+    if (!s) return;
+    stats.textContent = `tier ${s.tier} · ${s.frameCost}ms · ${s.bubbles} bellen · ${s.phase} · water ${s.level}`;
+    for (const b of debugEl.querySelectorAll('[data-quality]')) {
+      b.setAttribute('aria-pressed', String(Number(b.dataset.quality) === s.tier));
+    }
+  }, 1000);
 
   const toggle = el('button', {
     className: 'debug-toggle', type: 'button',
