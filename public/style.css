@@ -544,3 +544,25 @@ body.has-debug .toast { bottom: calc(46px + env(safe-area-inset-bottom)); }
 @media (prefers-reduced-motion: reduce) {
   *, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- token sheet ---------- */
+.token-state { margin: 2px 0 10px; font-size: 14px; }
+.token-state.ok { color: var(--accent); }
+.token-state.warn { color: var(--warn); }
+.token-state.bad { color: var(--danger); }
+
+.block-link {
+  display: block; text-align: center; text-decoration: none;
+  margin: 12px 0 6px; line-height: 22px;
+}
+.token-input {
+  width: 100%; margin-top: 8px; padding: 12px 13px; font: inherit;
+  background: rgba(0,0,0,.3); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px;
+  letter-spacing: .04em;
+}
+.token-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.banner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.banner[hidden] { display: none; }   /* display:flex would beat the UA [hidden] rule */
+.banner-action { min-height: 38px; padding: 8px 14px; font-size: 14px; margin-left: auto; }

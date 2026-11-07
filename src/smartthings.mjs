@@ -17,6 +17,10 @@ const BASE = 'https://api.smartthings.com/v1';
  */
 const DEVICE_ID = process.env.SMARTTHINGS_DEVICE_ID || device.deviceId;
 
+/** Set when the API rejects our credentials; cleared on the next success. */
+let lastAuthFailure = null;
+export const getLastAuthFailure = () => lastAuthFailure;
+
 export class SmartThingsError extends Error {
   constructor(message, { status, body } = {}) {
     super(message);
@@ -62,11 +66,20 @@ async function call(path, { method = 'GET', body, token } = {}) {
     throw new SmartThingsError(`Netwerkfout: ${err.message}`, { status: 0 });
   }
 
+  if (res.ok) lastAuthFailure = null;
+
   const text = await res.text();
   let parsed;
   try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
 
   if (!res.ok) {
+    // remember auth failures so the UI can say "token verlopen" rather than
+    // showing a generic error and leaving you to guess
+    if (res.status === 401 || res.status === 403) {
+      lastAuthFailure = { at: Date.now(), status: res.status };
+    } else if (res.status < 400) {
+      lastAuthFailure = null;
+    }
     const hint = hintFor(res.status);
     const detail = parsed?.error?.message || parsed?.message || '';
     throw new SmartThingsError(
@@ -75,6 +88,27 @@ async function call(path, { method = 'GET', body, token } = {}) {
     );
   }
   return parsed;
+}
+
+/**
+ * Does this token work? Used before persisting one from the UI, so a bad paste
+ * is rejected rather than silently breaking the panel.
+ */
+export async function validateToken(token) {
+  const clean = String(token ?? '').trim();
+  if (!clean) return { ok: false, error: 'Leeg token.' };
+  try {
+    const list = await call('/devices', { token: clean });
+    const n = list?.items?.length ?? 0;
+    const mine = (list?.items ?? []).some((d) => d.deviceId === DEVICE_ID);
+    return {
+      ok: true, devices: n,
+      // not fatal: the scopes may just be narrower, or the id may have changed
+      warning: mine ? null : 'Token werkt, maar deze wasmachine zit er niet bij.',
+    };
+  } catch (err) {
+    return { ok: false, error: err.message, status: err.status };
+  }
 }
 
 export const getRawStatus = (opts) => call(`/devices/${DEVICE_ID}/status`, opts);

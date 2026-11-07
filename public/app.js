@@ -374,6 +374,81 @@ function paintClock() {
   paintFavicon((s.progress ?? 0) / 100, accent);
 }
 
+/* ---------------- token ---------------- */
+
+const CREATE_TOKEN_URL = 'https://account.smartthings.com/tokens';
+
+function tokenStatusLine(m) {
+  if (!m.present) return ['Geen token ingesteld.', 'bad'];
+  if (m.lastAuthFailure) return ['Het token wordt geweigerd — waarschijnlijk verlopen.', 'bad'];
+  if (m.likelyExpired) return [`Opgeslagen ${m.ageHours} uur geleden, dus waarschijnlijk verlopen.`, 'bad'];
+  if (m.hoursLeft != null && m.hoursLeft < 4) return [`Nog ongeveer ${m.hoursLeft} uur geldig.`, 'warn'];
+  if (m.hoursLeft != null) return [`Token ${m.hint} — nog ongeveer ${m.hoursLeft} uur geldig.`, 'ok'];
+  return [`Token ${m.hint} aanwezig.`, 'ok'];
+}
+
+async function openTokenSheet() {
+  let meta = { present: false };
+  try { meta = await api('/api/token'); } catch { /* show the form anyway */ }
+
+  const [line, tone] = tokenStatusLine(meta);
+  const body = el('div');
+
+  body.append(el('p', { className: `token-state ${tone}`, textContent: line }));
+  body.append(el('p', {
+    className: 'muted small',
+    textContent: `Een personal access token van SmartThings vervalt ${meta.lifetimeHours ?? 24} uur na het aanmaken. `
+      + 'Maak een nieuw token aan, plak het hieronder en de app gaat meteen weer verder — geen herstart nodig.',
+  }));
+
+  const open = el('a', {
+    className: 'btn secondary block-link',
+    href: meta.createUrl ?? CREATE_TOKEN_URL,
+    target: '_blank', rel: 'noopener noreferrer',
+    textContent: 'Nieuw token aanmaken ↗',
+  });
+  body.append(open);
+
+  body.append(el('p', {
+    className: 'muted small',
+    textContent: 'Vink aan: Devices (list, read, execute) en Locations (read).',
+  }));
+
+  const input = el('input', {
+    type: 'password', className: 'token-input', placeholder: 'Plak het token hier',
+    autocomplete: 'off', spellcheck: false,
+  });
+  body.append(input);
+
+  const feedback = el('p', { className: 'muted small' });
+  body.append(feedback);
+
+  const save = btn('Opslaan', '', async () => {
+    const value = input.value.trim();
+    if (!value) { feedback.textContent = 'Niets geplakt.'; feedback.className = 'token-state bad'; return; }
+    feedback.className = 'muted small';
+    feedback.textContent = 'Controleren bij SmartThings…';
+    save.disabled = true;
+    try {
+      const r = await api('/api/token', { method: 'PUT', body: { token: value } });
+      closeSheet();
+      toast(r.warning ?? `Token opgeslagen — ${r.devices} apparaat(en) gevonden.`);
+      endsAt = null;              // re-anchor the clock from the first fresh poll
+      refreshStatus();
+    } catch (err) {
+      feedback.className = 'token-state bad';
+      feedback.textContent = err.message;
+      save.disabled = false;
+    }
+  });
+
+  openSheet('Token', body, [btn('Sluiten', 'secondary', closeSheet), save], '🔑');
+  setTimeout(() => input.focus(), 50);
+}
+
+/** Does this failure look like a credentials problem rather than a blip? */
+const looksLikeAuth = (msg) => /401|403|verlopen|ongeldig|SMARTTHINGS_TOKEN/i.test(msg ?? '');
+
 /* ---------------- monitor mode ---------------- */
 
 let monitor = false;
@@ -890,7 +965,15 @@ async function refreshStatus() {
     const b = $('#banner');
     b.hidden = false;
     b.className = 'banner error';
-    b.textContent = err.message;
+    b.replaceChildren(el('span', { textContent: err.message }));
+    // a dead token is fixable from here, so offer the way in rather than
+    // leaving an error message with nothing to do about it
+    if (looksLikeAuth(err.message)) {
+      b.append(el('button', {
+        className: 'btn secondary banner-action', textContent: 'Token vernieuwen',
+        onclick: openTokenSheet,
+      }));
+    }
   }
   renderStatus();
   // Poll quickly while something is happening, slowly when idle.
@@ -915,6 +998,7 @@ async function refreshStatus() {
   $('#theme-btn').onclick = openThemeSheet;
   $('#monitor-btn').onclick = () => toggleMonitor();
   $('#monitor-close').onclick = () => toggleMonitor(false);
+  $('#token-btn').onclick = openTokenSheet;
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { if (!$('#sheet').hidden) closeSheet(); else if (monitor) toggleMonitor(false); }

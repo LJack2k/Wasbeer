@@ -15,7 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 import { allCycles, describeCycle, defaultsFor, validateFavourite, device, OPTION_LABELS } from './catalog.mjs';
 import { buildApply, control, describeBatch, CYCLE_SELECTORS } from './commands.mjs';
-import { getStatus, sendCommands, SmartThingsError } from './smartthings.mjs';
+import { getStatus, sendCommands, SmartThingsError, validateToken, getLastAuthFailure } from './smartthings.mjs';
+import * as tokenStore from './token.mjs';
 import * as favourites from './favourites.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -111,6 +112,29 @@ const routes = {
     favourites: favourites.list(),
     selectors: CYCLE_SELECTORS,
   }),
+
+  /** What the UI may know about the token. Never the token itself. */
+  'GET /api/token': async (req, res) => json(res, 200, {
+    ...tokenStore.meta(),
+    lastAuthFailure: getLastAuthFailure(),
+    lifetimeHours: tokenStore.LIFETIME_HOURS,
+    createUrl: 'https://account.smartthings.com/tokens',
+  }),
+
+  /** Validate against the live API first, then persist. A bad paste is refused. */
+  'PUT /api/token': async (req, res) => {
+    const { token } = await readBody(req);
+    const check = await validateToken(token);
+    if (!check.ok) {
+      return json(res, 400, { error: check.error ?? 'Token werkt niet.', status: check.status });
+    }
+    try {
+      const meta = tokenStore.save(token);
+      json(res, 200, { ok: true, ...meta, devices: check.devices, warning: check.warning });
+    } catch (err) {
+      json(res, 500, { error: `Opslaan mislukt: ${err.message}` });
+    }
+  },
 
   'GET /api/status': async (req, res) => {
     try { json(res, 200, await getStatus()); }

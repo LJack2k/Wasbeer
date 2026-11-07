@@ -428,8 +428,31 @@ because it identifies one specific appliance, so `data/device.json` carries
 `null` in its place and `.env` supplies the real one. `probe-output/` is
 gitignored too — those dumps contain serial numbers and location ids.
 
-Remember PATs expire after 24 hours, so step 1 is a recurring chore until this
-moves to OAuth.
+### Renewing the token without an SSH session
+
+PATs expire 24 hours after creation, which makes a hosted panel a daily chore if
+the only way in is editing `.env` on the box. So the app can take a new one
+itself: the **🔑** button in the header opens a page that links straight to
+<https://account.smartthings.com/tokens>, takes a pasted token, and says how
+long the current one has left.
+
+A pasted token is **validated against the live API before anything is written**,
+so a bad paste is refused rather than silently breaking the panel. On success it
+is written to `.env` through a temp file and `process.env` is updated in place,
+so it takes effect immediately — no restart.
+
+The token is never readable over HTTP. `GET /api/token` returns only whether one
+is present, the last four characters, and its age.
+
+When a call comes back 401, the error banner grows a **Token vernieuwen** button,
+so a dead token is fixable from wherever you are rather than being an error
+message with nothing to do about it.
+
+This means the process needs write access to `.env`.
+
+**The app has no authentication of its own.** On a home LAN that is probably
+fine — the machine still ignores everything unless Smart Control is pressed on
+its panel — but do not put it on the open internet as it stands.
 
 ## Scripts
 
