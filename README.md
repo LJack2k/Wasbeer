@@ -380,6 +380,21 @@ scales the countdown to `17vh` with the porthole at `34vh`. Requests fullscreen
 where the browser allows it, and after a minute without pointer movement the
 controls and chips fade out, leaving the numbers.
 
+Four ways out, because a tablet on a laundry-room wall has no keyboard:
+
+- the **✕** in the top-right corner — 48px, a real touch target, and it only
+  dims to 25% when idle rather than disappearing
+- **double-tap anywhere**. `dblclick` is unreliable on touch, so this is
+  measured by hand: two `pointerup` events within 400ms and 40px of each other.
+  Taps landing on a button, input or the debug bar are ignored, so *Pauzeren*
+  still just pauses.
+- **Esc**, or **M** again
+- leaving fullscreen by the browser's own route (Esc, F11, a system gesture)
+  drops monitor mode too, rather than stranding a chrome-less page
+
+Entering it shows a one-off toast naming those routes, since a screen with no
+visible chrome needs to say how to get out of itself.
+
 ### Moments
 
 Smooth eases have no punctuation, so three one-off pulses mark the transitions:

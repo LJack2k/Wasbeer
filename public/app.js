@@ -387,6 +387,7 @@ function toggleMonitor(force) {
   if (monitor) {
     document.documentElement.requestFullscreen?.().catch(() => { /* needs a gesture; fine without */ });
     armIdle();
+    if (force === undefined) toast('Dubbeltik, Esc of ✕ om te sluiten');
   } else {
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     clearTimeout(idleTimer);
@@ -401,7 +402,35 @@ function armIdle() {
   if (!monitor) return;
   idleTimer = setTimeout(() => document.body.classList.add('dim'), 60000);
 }
+// pointerdown too: a tablet produces no pointermove, so a tap must wake it
 addEventListener('pointermove', () => { if (monitor) armIdle(); }, { passive: true });
+addEventListener('pointerdown', () => { if (monitor) armIdle(); }, { passive: true });
+
+/**
+ * Double-tap anywhere to leave monitor mode. `dblclick` is unreliable on touch,
+ * so this measures it by hand: two taps within 400ms and 40px of each other.
+ * Taps on anything interactive are ignored, so Pauzeren still just pauses.
+ */
+let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
+addEventListener('pointerup', (e) => {
+  if (!monitor) return;
+  if (e.target.closest?.('button, input, select, a, label, .debug')) return;
+
+  const now = Date.now();
+  const near = Math.hypot(e.clientX - lastTapX, e.clientY - lastTapY) < 40;
+  if (now - lastTapAt < 400 && near) {
+    lastTapAt = 0;
+    toggleMonitor(false);
+    return;
+  }
+  lastTapAt = now; lastTapX = e.clientX; lastTapY = e.clientY;
+});
+
+// Leaving fullscreen by the browser's own route (Esc, F11, a system gesture)
+// should drop monitor mode too, rather than stranding a chrome-less page.
+document.addEventListener('fullscreenchange', () => {
+  if (monitor && !document.fullscreenElement) toggleMonitor(false);
+});
 
 /** Cards gain a scrim as the bubbles pile up, so zeepfeest stays readable. */
 function applyScrim(density) {
@@ -885,6 +914,7 @@ async function refreshStatus() {
   $('#refresh').onclick = refreshStatus;
   $('#theme-btn').onclick = openThemeSheet;
   $('#monitor-btn').onclick = () => toggleMonitor();
+  $('#monitor-close').onclick = () => toggleMonitor(false);
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { if (!$('#sheet').hidden) closeSheet(); else if (monitor) toggleMonitor(false); }

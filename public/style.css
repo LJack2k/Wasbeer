@@ -179,6 +179,11 @@ main { padding: 0 var(--gutter) 56px; max-width: 760px; margin: 0 auto; }
 .tseg.now .tseg-label { color: var(--text); }
 .tseg.now .tseg-label b { color: var(--run); }
 
+/* The final phase is usually the shortest, so its label does not fit inside its
+   own segment. Anchor it to the right end of the bar and let it spill left into
+   the empty space rather than clipping. */
+.tseg:last-child .tseg-label { justify-content: flex-end; overflow: visible; }
+
 /* In the narrow status card only the current phase has room for its duration.
    Wide layouts and monitor mode show them all. */
 .tseg-label span { display: none; }
@@ -345,6 +350,25 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .toast.bad { border-color: var(--danger); }
 
 /* ---------- monitor mode ---------- */
+
+/* The way out, for screens with no keyboard. 48px is a real touch target. */
+.monitor-close { display: none; }
+body.monitor .monitor-close {
+  display: grid; place-items: center;
+  position: fixed; z-index: 30;
+  top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right));
+  width: 48px; height: 48px; padding: 0;
+  font-size: 26px; line-height: 1;
+  background: rgba(0, 0, 0, .5); color: var(--text);
+  border: 1px solid rgba(255, 255, 255, .2); border-radius: 50%;
+  backdrop-filter: blur(10px);
+  transition: opacity .8s ease, transform .12s ease, background .2s;
+}
+body.monitor .monitor-close:hover { background: rgba(0, 0, 0, .7); }
+body.monitor .monitor-close:active { transform: scale(.92); }
+/* fades with the rest when idle, but never out of reach */
+body.monitor.dim .monitor-close { opacity: .25; }
+
 /* Fullscreen glanceable view for the second screen: the status, nothing else. */
 body.monitor .topbar,
 body.monitor .col-side,
