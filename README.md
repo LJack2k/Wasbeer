@@ -243,14 +243,33 @@ every option re-filters to that cycle's own limits. Choose Wol and the spin
 selector offers only Spoelstop / Geen / 400 tpm, because that is all cycle 26
 accepts; Bubble Soak shows as "Uit (vast)" because the machine fixes it.
 
+## Setup
+
+1. Get a Personal Access Token at <https://account.smartthings.com/tokens>, with
+   devices list/read/execute and locations read.
+2. `cp .env.example .env` and paste it into `SMARTTHINGS_TOKEN`.
+3. `npm run probe` — it lists the devices on your account. Copy your washer's id
+   into `SMARTTHINGS_DEVICE_ID` in the same file.
+4. `npm run dev`
+
+Neither value is in the repo. The token is obvious; the device id is left out
+because it identifies one specific appliance, so `data/device.json` carries
+`null` in its place and `.env` supplies the real one. `probe-output/` is
+gitignored too — those dumps contain serial numbers and location ids.
+
+Remember PATs expire after 24 hours, so step 1 is a recurring chore until this
+moves to OAuth.
+
 ## Scripts
 
 ```
-npm run validate   # check the catalog is internally consistent (no network)
-npm run probe      # talk to the API: list devices, dump status, extract option lists
+npm run dev          # the app, with --watch, on http://localhost:8099
+npm start            # the app, no watcher
+npm run validate     # check the catalog is consistent (no network)
+npm run dry-run      # show what each favourite would send (no network)
+npm run probe        # list devices, dump status, extract option lists
+npm run capabilities # refetch the capability command schema
 ```
 
-`probe` needs `SMARTTHINGS_TOKEN` in `.env` (copy `.env.example`). Get a token at
-<https://account.smartthings.com/tokens> with devices list/read/execute and
-locations read. It reports whether a failure looks like token expiry (401) or the
-paid-plan gate (402/403).
+`probe` reports whether a failure looks like token expiry (401) or the paid-plan
+gate (402/403).
