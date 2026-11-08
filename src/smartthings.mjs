@@ -130,6 +130,12 @@ export function readStatus(raw) {
 
   const operating = val(main, 'samsungce.washerOperatingState', 'operatingState');
   const machine = val(main, 'washerOperatingState', 'machineState');
+  const jobState = val(main, 'samsungce.washerOperatingState', 'washerJobState');
+  const jobPhase = val(main, 'samsungce.washerOperatingState', 'washerJobPhase');
+  // After the last spin the machine keeps saying running/run for a while, with
+  // the job itself at "finished" and progress 100. That is done, not running --
+  // otherwise the countdown carries on past the end of the wash.
+  const finished = jobState === 'finished' || jobPhase === 'finished';
 
   return {
     online: true,
@@ -139,9 +145,10 @@ export function readStatus(raw) {
 
     operatingState: operating,          // ready | running | paused
     machineState: machine,              // stop | run | pause
-    running: operating === 'running' || machine === 'run',
-    jobState: val(main, 'samsungce.washerOperatingState', 'washerJobState'),
-    jobPhase: val(main, 'samsungce.washerOperatingState', 'washerJobPhase'),
+    running: (operating === 'running' || machine === 'run') && !finished,
+    finished,
+    jobState,
+    jobPhase,
 
     cycle: course,
     cycleQualified: qualified,
